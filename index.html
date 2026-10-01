@@ -15,7 +15,9 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <!-- SheetJS for Excel Export -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-    
+    <!-- CHART.JS TAMBAHKAN DI SINI -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
@@ -236,7 +238,8 @@
                 treasurer: "Lik Ma'rifatul Ain, A.Ma", 
                 semester: "Ganjil", 
                 year: "2026/2027", 
-                fonnteToken: "VxX97NQfoG9qSoGHkg9X"
+                fonnteToken: "VxX97NQfoG9qSoGHkg9X",
+                stsDate: "2026-10-15"
             }
         };
         
@@ -1661,8 +1664,9 @@
                                 <p class="font-extrabold text-slate-800"><u>${waliKelasName}</u></p>
                             </div>
                             <div>
-                                <p class="font-bold text-slate-600">Kepala Sekolah</p>
-                                <div class="h-16"></div>
+                                <p class="font-bold text-slate-600">Diberikan di: Bluri<br>Tanggal: <u>${settings.stsDate ? new Date(settings.stsDate).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'}) : '....................'}</u></p>
+                                <p class="font-bold text-slate-600 mt-1">Kepala Sekolah</p>
+                                <div class="h-12"></div>
                                 <p class="font-extrabold text-slate-800"><u>${settings.principal || 'Kepala Sekolah'}</u></p>
                             </div>
                         </div>
@@ -1831,7 +1835,12 @@
                         <tr>
                             <td width="33%">Orang Tua / Wali<br><br><br><br>( .................... )</td>
                             <td width="33%">Wali Kelas ${student.class}<br><br><br><br><u>${waliKelasName}</u></td>
-                            <td width="34%">Kepala Sekolah<br><br><br><br><u>${settings.principal || 'Kepala Sekolah'}</u></td>
+                            <td width="34%">
+                                Diberikan di: Bluri<br>
+                                Tanggal: <u>${settings.stsDate ? new Date(settings.stsDate).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'}) : '....................'}</u><br><br>
+                                Kepala Sekolah<br><br><br><br>
+                                <u>${settings.principal || 'Kepala Sekolah'}</u>
+                            </td>
                         </tr>
                     </table>
                 </body>
@@ -5208,12 +5217,12 @@ window.autoFillSppNote = (month) => {
                 <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-sm border border-slate-100 max-w-3xl slide-up">
                     <form onsubmit="window.saveSettings(event)" class="space-y-6">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <div><label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Nama Sekolah / Instansi</label><input type="text" id="set-school" value="${s.schoolName}" class="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required></div>
-                            <div><label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Tahun Pelajaran</label><input type="text" id="set-year" value="${s.year}" class="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required></div>
+                            <div><label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Nama Sekolah / Instansi</label><input type="text" id="set-school" value="${s.schoolName || ''}" class="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required></div>
+                            <div><label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Tahun Pelajaran</label><input type="text" id="set-year" value="${s.year || ''}" class="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required></div>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <div><label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Nama Kepala Sekolah</label><input type="text" id="set-kepsek" value="${s.principal}" class="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required></div>
-                            <div><label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Nama Bendahara</label><input type="text" id="set-bendahara" value="${s.treasurer}" class="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required></div>
+                            <div><label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Nama Kepala Sekolah</label><input type="text" id="set-kepsek" value="${s.principal || ''}" class="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required></div>
+                            <div><label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Nama Bendahara</label><input type="text" id="set-bendahara" value="${s.treasurer || ''}" class="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required></div>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div><label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Semester Berjalan</label>
@@ -5223,9 +5232,13 @@ window.autoFillSppNote = (month) => {
                                 </select>
                             </div>
                             <div>
-                                <label class="text-xs font-bold text-slate-600 uppercase mb-2 block flex justify-between">Token Fonnte (WhatsApp API) <a href="https://fonnte.com" target="_blank" class="text-indigo-500 hover:underline">Get Token</a></label>
-                                <input type="text" id="set-fonnte" value="${s.fonnteToken}" class="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white">
+                                <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Tanggal Raport STS</label>
+                                <input type="date" id="set-sts-date" value="${s.stsDate || ''}" class="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white">
                             </div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-600 uppercase mb-2 block flex justify-between">Token Fonnte (WhatsApp API) <a href="https://fonnte.com" target="_blank" class="text-indigo-500 hover:underline">Get Token</a></label>
+                            <input type="text" id="set-fonnte" value="${s.fonnteToken || ''}" class="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white">
                         </div>
                         <div class="pt-4 border-t border-slate-100 flex justify-end">
                             <button type="submit" class="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2 transform hover:-translate-y-0.5"><i class="fas fa-save"></i> Simpan Pengaturan</button>
@@ -5244,6 +5257,7 @@ window.autoFillSppNote = (month) => {
                 treasurer: document.getElementById('set-bendahara').value.trim(),
                 semester: document.getElementById('set-semester').value,
                 fonnteToken: document.getElementById('set-fonnte').value.trim(),
+                stsDate: document.getElementById('set-sts-date').value
             };
             
             window.appState.settings = setObj;
