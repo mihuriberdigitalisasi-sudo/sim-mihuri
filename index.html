@@ -210,7 +210,7 @@
         };
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, getDocs, getDoc, setDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, getDocs, getDoc, setDoc, addDoc, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         const firebaseConfig = {
             apiKey: "AIzaSyBf-lTPph9C3eBKro8MGtD8xZpVrJ6DQUY",
@@ -255,13 +255,210 @@
             }
             return students;
         };
-		// Helper untuk mendapatkan tanggal lokal YYYY-MM-DD tanpa terpengaruh UTC
-		const getLocalDateString = (date = new Date()) => {
-			const year = date.getFullYear();
-			const month = String(date.getMonth() + 1).padStart(2, '0');
-			const day = String(date.getDate()).padStart(2, '0');
-			return `${year}-${month}-${day}`;
-		};
+        /* ==========================================================================
+           PENGATURAN HAK AKSES ABSENSI PER GURU / WALI KELAS (SERBAGUNA / ROBUST)
+           ========================================================================== */
+
+        // 1. Helper Toleran untuk Mendapatkan Daftar Kelas Yang Diampu Guru
+        window.getTeacherManagedClasses = function() {
+            if (!window.currentUser) return [];
+            
+            // Cek Role (Abaikan Kapital/Kecil: 'guru', 'GURU', 'Guru')
+            const userRole = String(window.currentUser.role || '').toUpperCase();
+            const isGuru = userRole === 'GURU' || (typeof ROLES !== 'undefined' && window.currentUser.role === ROLES.GURU);
+            if (!isGuru) return [];
+            
+            let classes = [];
+
+            // A. Ambil dari Profil Guru (Dukungan Array ['1A'] maupun String "1A, 1B" / 'kelas' / 'classes')
+            const rawClasses = window.currentUser.classes || window.currentUser.kelas;
+            if (Array.isArray(rawClasses)) {
+                classes.push(...rawClasses);
+            } else if (typeof rawClasses === 'string' && rawClasses.trim()) {
+                classes.push(...rawClasses.split(',').map(c => c.trim()));
+            }
+
+            // B. Ambil dari Master Wali Kelas / Homerooms (Dukungan nama/namaGuru/teacherName & kelas/class)
+            const homerooms = window.appState.homerooms || window.appState.walikelas || [];
+            const currentName = String(window.currentUser.name || window.currentUser.nama || '').toLowerCase().trim();
+            const currentNip = String(window.currentUser.nip || (window.currentUser.data && window.currentUser.data.nip) || '').trim();
+
+            homerooms.forEach(h => {
+                const hTeacherName = String(h.teacherName || h.namaGuru || h.nama || '').toLowerCase().trim();
+                const hNip = String(h.nip || '').trim();
+                const hClass = h.class || h.kelas;
+
+                const isNameMatch = currentName && hTeacherName && (currentName === hTeacherName || hTeacherName.includes(currentName) || currentName.includes(hTeacherName));
+                const isNipMatch = currentNip && hNip && currentNip === hNip;
+
+                if ((isNameMatch || isNipMatch) && hClass) {
+                    classes.push(hClass);
+                }
+            });
+
+            // Kembalikan daftar kelas unik
+            return [...new Set(classes)].filter(Boolean).sort();
+        };
+
+        // Pembaharuan getFilteredStudents agar Sinkron dengan Pembatasan Baru
+        window.getFilteredStudents = function() {
+            let students = window.appState.students || [];
+            const userRole = String((window.currentUser && window.currentUser.role) || '').toUpperCase();
+            
+            if (userRole === 'GURU') {
+                const teacherClasses = window.getTeacherManagedClasses();
+                if (teacherClasses.length > 0) {
+                    students = students.filter(s => teacherClasses.includes(s.class || s.kelas));
+                }
+            }
+            return students;
+        };
+
+        // 2. Render Halaman Absensi Kehadiran
+        window.renderAttendance = function() {
+            const content = document.getElementById('main-content');
+            if (!content) return;
+
+            const userRole = String((window.currentUser && window.currentUser.role) || '').toUpperCase();
+            const isAdmin = userRole === 'ADMIN';
+            const isGuru = userRole === 'GURU';
+
+            // Dapatkan seluruh daftar kelas dari master siswa (dukungan 'class' maupun 'kelas')
+            const allClasses = [...new Set((window.appState.students || []).map(s => s.class || s.kelas))].filter(Boolean).sort();
+            
+            // Tentukan Kelas yang Berhak Diakses
+            let allowedClasses = allClasses;
+            if (isGuru) {
+                const managed = window.getTeacherManagedClasses();
+                if (managed.length > 0) {
+                    allowedClasses = allClasses.filter(c => managed.includes(c));
+                }
+            }
+
+            // Set Default Filter jika pilihan saat ini tidak diizinkan
+            if (isGuru && (!window.attClassFilter || window.attClassFilter === 'Semua' || !allowedClasses.includes(window.attClassFilter))) {
+                window.attClassFilter = allowedClasses[0] || 'Semua';
+            }
+
+            // Filter Data Riwayat Absensi
+            let attendanceList = window.appState.attendance || [];
+
+            if (isGuru) {
+                attendanceList = attendanceList.filter(a => allowedClasses.includes(a.class || a.kelas));
+            }
+
+            if (window.attClassFilter && window.attClassFilter !== 'Semua') {
+                attendanceList = attendanceList.filter(a => (a.class || a.kelas) === window.attClassFilter);
+            }
+
+            if (window.attDateFilter) {
+                attendanceList = attendanceList.filter(a => a.date === window.attDateFilter);
+            }
+
+            attendanceList = attendanceList.slice().sort((a, b) => {
+                const dateA = new Date((a.date || '') + 'T' + (a.time || '00:00'));
+                const dateB = new Date((b.date || '') + 'T' + (b.time || '00:00'));
+                return dateB - dateA;
+            });
+
+            // Opsi Filter Dropdown Kelas
+            let classOptionsHtml = '';
+            if (isAdmin) {
+                classOptionsHtml += `<option value="Semua" ${window.attClassFilter === 'Semua' ? 'selected' : ''}>Semua Kelas</option>`;
+            }
+            classOptionsHtml += allowedClasses.map(c => `
+                <option value="${c}" ${c === window.attClassFilter ? 'selected' : ''}>Kelas ${c}</option>
+            `).join('');
+
+            // Baris Tabel Riwayat
+            let rowsHtml = attendanceList.map((a, idx) => {
+                const itemClass = a.class || a.kelas || '-';
+                const statusBadge = a.status === 'H' ? '<span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-xs font-black">Hadir</span>' :
+                                    a.status === 'T' ? '<span class="px-2.5 py-1 bg-amber-100 text-amber-800 rounded-lg text-xs font-black">Terlambat</span>' :
+                                    a.status === 'I' ? '<span class="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-lg text-xs font-black">Izin</span>' :
+                                    a.status === 'S' ? '<span class="px-2.5 py-1 bg-purple-100 text-purple-800 rounded-lg text-xs font-black">Sakit</span>' :
+                                    '<span class="px-2.5 py-1 bg-red-100 text-red-800 rounded-lg text-xs font-black">Alpa</span>';
+
+                return `
+                    <tr class="hover:bg-slate-50 border-b border-slate-100 text-xs sm:text-sm">
+                        <td class="p-4 text-center font-bold text-slate-400">${idx + 1}</td>
+                        <td class="p-4 font-extrabold text-slate-800">${a.studentName || a.namaSiswa || '-'} <span class="block text-[10px] text-slate-400 font-medium">NISN: ${a.nisn || '-'}</span></td>
+                        <td class="p-4 text-center font-bold text-indigo-600">Kelas ${itemClass}</td>
+                        <td class="p-4 font-medium text-slate-600">${a.date || '-'} <span class="text-[11px] text-slate-400">(${a.time || '-'})</span></td>
+                        <td class="p-4 text-center">${statusBadge}</td>
+                        <td class="p-4 text-slate-500 font-medium text-xs">${a.method || 'Manual'}</td>
+                        <td class="p-4 text-slate-500 text-xs">${a.note || '-'}</td>
+                        ${isAdmin ? `
+                            <td class="p-4 text-center">
+                                <button onclick="window.confirmDelete('attendance', '${a.id}', 'attendance')" class="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-xs font-bold transition-all border border-red-200" title="Hapus">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </td>
+                        ` : ''}
+                    </tr>
+                `;
+            }).join('');
+
+            if (!attendanceList.length) {
+                rowsHtml = `<tr><td colspan="${isAdmin ? 8 : 7}" class="p-8 text-center text-slate-400 font-semibold">Tidak ada data riwayat absensi yang ditemukan untuk kelas ini.</td></tr>`;
+            }
+
+            content.innerHTML = `
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 slide-up">
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">Riwayat & Absensi Kehadiran</h2>
+                        <p class="text-xs sm:text-sm text-slate-500 font-medium">Kelola dan pantau kehadiran siswa harian sesuai kelas pengampuan.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                        <button onclick="window.openManualAttendanceModal()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md transition-all flex items-center gap-2">
+                            <i class="fas fa-user-check"></i> Absen Manual
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mb-6 flex flex-wrap items-center gap-4 slide-up">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-slate-500"><i class="fas fa-filter text-indigo-500"></i> Kelas:</span>
+                        <select onchange="window.attClassFilter = this.value; window.renderAttendance();" class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
+                            ${classOptionsHtml}
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-slate-500"><i class="fas fa-calendar-alt text-indigo-500"></i> Tanggal:</span>
+                        <input type="date" value="${window.attDateFilter || ''}" onchange="window.attDateFilter = this.value; window.renderAttendance();" class="p-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
+                        ${window.attDateFilter ? `<button onclick="window.attDateFilter = ''; window.renderAttendance();" class="text-xs text-red-500 font-bold hover:underline ml-1">Reset</button>` : ''}
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden slide-up">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[750px]">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider text-[11px] font-extrabold border-b border-slate-100">
+                                    <th class="p-4 text-center w-12">No</th>
+                                    <th class="p-4">Nama Siswa</th>
+                                    <th class="p-4 text-center">Kelas</th>
+                                    <th class="p-4">Tanggal & Waktu</th>
+                                    <th class="p-4 text-center">Status</th>
+                                    <th class="p-4">Metode</th>
+                                    <th class="p-4">Catatan</th>
+                                    ${isAdmin ? `<th class="p-4 text-center">Aksi</th>` : ''}
+                                </tr>
+                            </thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        };
+		// Helper untuk mendapatkan tanggal lokal YYYY-MM-DD standar WIB (Asia/Jakarta)
+        const getLocalDateString = (date = new Date()) => {
+            const jakartaDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+            const year = jakartaDate.getFullYear();
+            const month = String(jakartaDate.getMonth() + 1).padStart(2, '0');
+            const day = String(jakartaDate.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
 
         window.currentUser = null;
         window.db = null; window.fs = null; window.auth = null; 
@@ -331,7 +528,7 @@
                 const app = initializeApp(firebaseConfig);
                 window.db = getFirestore(app);
                 window.auth = getAuth(app);
-                window.fs = { collection, doc, getDocs, getDoc, setDoc, addDoc, deleteDoc };
+                window.fs = { collection, doc, getDocs, getDoc, setDoc, addDoc, deleteDoc, writeBatch };
                 
                 await signInAnonymously(window.auth);
                 
@@ -571,16 +768,19 @@
 							if (student) {
 								window.currentUser = { role: ROLES.SISWA, name: student.name, id: pwd, data: student };
 								
-								// --- TAMBAHAN: LOGIKA ABSENSI MANDIRI ---
-								const todayStr = getLocalDateString(new Date());
-								const hasAttended = (window.appState.attendance || []).some(a => a.nisn === student.nisn && a.date === todayStr);
-								
-								if (hasAttended) {
-									window.showToast("Anda sudah melakukan absensi hari ini, besok lagi untuk absen", "info");
-									initAppUI();
-								} else {
-									window.showStudentSelfAttendanceModal(student);
-								}
+								// --- LOGIKA ABSENSI MANDIRI SISWA ---
+                                const todayStr = getLocalDateString(new Date());
+
+                                // Cari record absensi siswa untuk hari ini
+                                const todayAtt = (window.appState.attendance || []).find(a => a.nisn === student.nisn && a.date === todayStr);
+
+                                // Kriteria sudah absen: jika record sudah ada DAN terisi oleh 'Absensi Mandiri' atau status valid
+                                if (todayAtt && (todayAtt.method === 'Absensi Mandiri' || ['H', 'T', 'I', 'S'].includes(todayAtt.status))) {
+                                    window.showToast("Anda sudah melakukan absensi hari ini, besok lagi untuk absen", "info");
+                                    initAppUI();
+                                } else {
+                                    window.showStudentSelfAttendanceModal(student);
+                                }
 								// ----------------------------------------
 							} else {
 								window.showToast('ID, Password Guru, atau NISN tidak ditemukan!', 'error');
@@ -631,62 +831,86 @@
         };
 
         window.submitStudentSelfAttendance = async (e, nisn) => {
-            e.preventDefault();
-            
-            const student = window.currentUser.data;
-            let status = document.querySelector('input[name="self_att_status"]:checked').value;
-            
-            const now = new Date();
-            const dateStr = getLocalDateString(now);
-            const timeStr = now.toTimeString().split(' ')[0].substring(0, 5);
-            
-            let isLate = false;
-            // Evaluasi keterlambatan hanya jika memilih "Hadir"
-            if (status === 'H' && timeStr > CONSTANTS.LATE_TIME) {
-                status = 'T'; // Ubah status menjadi Terlambat
-                isLate = true;
-            }
-            
-            const attObj = {
-                nisn: student.nisn, 
-                studentName: student.name, 
-                class: student.class,
-                date: dateStr, 
-                time: timeStr, 
-                status: status, 
-                method: 'Absensi Mandiri',
-                note: status === 'T' ? 'Terlambat via Login' : (status === 'H' ? 'Hadir Tepat Waktu' : (status === 'I' ? 'Izin via Login' : 'Sakit via Login')),
-                semester: window.appState.settings.semester, 
-                year: window.appState.settings.year,
-                createdAt: new Date().toISOString()
-            };
+    e.preventDefault();
+    
+    const student = window.currentUser.data;
+    let status = document.querySelector('input[name="self_att_status"]:checked').value;
+    
+    const now = new Date();
+    const jakartaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+    const dateStr = getLocalDateString(now);
+    const timeStr = String(jakartaTime.getHours()).padStart(2, '0') + ':' + String(jakartaTime.getMinutes()).padStart(2, '0');
+    
+    let isLate = false;
+    // Evaluasi keterlambatan hanya jika memilih "Hadir"
+    if (status === 'H' && timeStr > CONSTANTS.LATE_TIME) {
+        status = 'T'; // Ubah status menjadi Terlambat
+        isLate = true;
+    }
+    
+    const attObj = {
+        nisn: student.nisn, 
+        studentName: student.name, 
+        class: student.class,
+        date: dateStr, 
+        time: timeStr, 
+        status: status, 
+        method: 'Absensi Mandiri',
+        note: status === 'T' ? 'Terlambat via Login' : (status === 'H' ? 'Hadir Tepat Waktu' : (status === 'I' ? 'Izin via Login' : 'Sakit via Login')),
+        semester: window.appState.settings.semester, 
+        year: window.appState.settings.year,
+        createdAt: new Date().toISOString()
+    };
 
-            const customId = `${nisn}_${dateStr}`;
+    const customId = `${nisn}_${dateStr}`;
+    
+    // Tutup modal agar tidak menutupi tampilan
+    window.closeModal();
+    
+    // Simpan ke cloud
+    const res = await window.saveDataToCloud('attendance', attObj, customId);
+    
+    if (res) {
+        // =========================================================
+        // KODE BARU: KIRIM NOTIFIKASI WA KE ORANG TUA
+        // =========================================================
+        const parentPhone = student.phone || student.hpOrtu || student.noHp;
+        if (parentPhone && parentPhone !== '-') {
+            const statusLabel = status === 'H' ? 'Hadir Tepat Waktu' :
+                                status === 'T' ? 'Terlambat' :
+                                status === 'I' ? 'Izin' : 'Sakit';
             
-            // Tutup modal agar tidak menutupi tampilan
-            window.closeModal();
-            
-            // Simpan ke cloud
-            const res = await window.saveDataToCloud('attendance', attObj, customId);
-            
-            if (res) {
-                // Notifikasi berdasarkan kondisi tepat waktu, terlambat, izin, atau sakit
-                if (status === 'I' || status === 'S') {
-                    window.showToast("Absensi Izin/Sakit berhasil disimpan.", "info");
-                } else if (isLate) {
-                    window.showToast("Anda melakukan absensi Terlambat. besok lakukan tepat waktu ya...?", "error");
-                } else {
-                    window.showToast("terima kasih telah melakukan absensi tepat waktu", "success");
-                }
-                
-                // Lanjutkan masuk ke sistem / dashboard
-                initAppUI();
-            } else {
-                window.showToast("Gagal menyimpan absensi, silakan hubungi admin.", "error");
-                // Tetap diizinkan masuk jika database sedang offline agar tidak memblokir akses akademik
-                initAppUI();
-            }
-        };
+            const waMessage = `*NOTIFIKASI KEHADIRAN SISWA*\n` +
+                              `=============================\n` +
+                              `Nama   : *${student.name}*\n` +
+                              `NISN   : ${student.nisn}\n` +
+                              `Kelas  : ${student.class}\n` +
+                              `Tanggal: ${dateStr}\n` +
+                              `Waktu  : ${timeStr} WIB\n` +
+                              `Status : *${statusLabel}*\n` +
+                              `=============================\n` +
+                              `_Pesan otomatis dari ${window.appState.settings.schoolName || 'Sistem Sekolah'}._`;
+
+            window.sendWaNotification(parentPhone, waMessage);
+        }
+        // =========================================================
+
+        // Notifikasi berdasarkan kondisi
+        if (status === 'I' || status === 'S') {
+            window.showToast("Absensi Izin/Sakit berhasil disimpan.", "info");
+        } else if (isLate) {
+            window.showToast("Anda melakukan absensi Terlambat. besok lakukan tepat waktu ya...?", "error");
+        } else {
+            window.showToast("terima kasih telah melakukan absensi tepat waktu", "success");
+        }
+        
+        // Lanjutkan masuk ke sistem / dashboard
+        initAppUI();
+    } else {
+        window.showToast("Gagal menyimpan absensi, silakan hubungi admin.", "error");
+        initAppUI();
+    }
+    };
         // --------------------------------------------------------------
 
         window.logout = () => {
@@ -852,61 +1076,110 @@
         };
 
         window.processBatchAcademic = async function(e) {
-            e.preventDefault();
-            const subject = document.getElementById('batch-acad-subject').value.trim();
-            const type = document.getElementById('batch-acad-type').value;
-            const targetClass = document.getElementById('batch-acad-class').value;
-            const materi = document.getElementById('batch-acad-materi').value.trim();
+    e.preventDefault();
+    const subject = document.getElementById('batch-acad-subject').value.trim();
+    const type = document.getElementById('batch-acad-type').value;
+    const targetClass = document.getElementById('batch-acad-class').value;
+    const materi = document.getElementById('batch-acad-materi').value.trim();
 
-            if (!subject) {
-                window.showToast("Mata pelajaran harus diisi!", "error");
-                return;
+    if (!subject) {
+        window.showToast("Mata pelajaran harus diisi!", "error");
+        return;
+    }
+
+    const inputs = document.querySelectorAll('input[name^="score_"]');
+    const btn = document.getElementById('btn-submit-batch-acad');
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> Menyimpan ke Cloud...`;
+
+    if (!window.db) {
+        window.showToast("Koneksi database offline!", "error");
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fas fa-save"></i> Simpan Semua Nilai`;
+        return;
+    }
+
+    // Pengecekan keamanan jika modul Firestore writeBatch belum termuat
+    if (!window.fs || typeof window.fs.writeBatch !== 'function') {
+        window.showToast("Fungsi Batch Firestore belum siap. Silakan refresh halaman!", "error");
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fas fa-save"></i> Simpan Semua Nilai`;
+        return;
+    }
+
+    try {
+        const batch = window.fs.writeBatch(window.db);
+        let prepareCount = 0;
+        const newRecords = [];
+
+        inputs.forEach(input => {
+            const scoreVal = input.value.trim();
+            if (scoreVal !== '') {
+                const nisn = input.getAttribute('data-nisn');
+                const studentName = input.getAttribute('data-name');
+                const score = parseFloat(scoreVal);
+
+                const acadObj = {
+                    nisn: nisn,
+                    studentName: studentName,
+                    class: targetClass,
+                    subject: subject,
+                    type: type,
+                    score: score,
+                    materi: materi || '-',
+                    note: materi || '-',
+                    semester: window.appState.settings.semester,
+                    year: window.appState.settings.year,
+                    updatedAt: new Date().toISOString()
+                };
+
+                const cleanSubject = subject.replace(/[^a-zA-Z0-9]/g, '_');
+                const cleanType = type.replace(/[^a-zA-Z0-9]/g, '_');
+
+                const customId = `${nisn}_${cleanSubject}_${cleanType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                acadObj.id = customId;
+
+                const docRef = window.fs.doc(window.db, 'academics', customId);
+                batch.set(docRef, acadObj);
+
+                newRecords.push(acadObj);
+                prepareCount++;
             }
+        });
 
-            const inputs = document.querySelectorAll('input[name^="score_"]');
-            let savedCount = 0;
+        if (prepareCount === 0) {
+            window.showToast("Tidak ada nilai yang diinputkan.", "info");
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fas fa-save"></i> Simpan Semua Nilai`;
+            return;
+        }
 
-            const btn = document.getElementById('btn-submit-batch-acad');
-            btn.disabled = true;
-            btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> Menyimpan...`;
+        // Pengiriman massal dalam 1 kali request
+        await batch.commit();
 
-            for (let input of inputs) {
-                const scoreVal = input.value.trim();
-                if (scoreVal !== '') {
-                    const nisn = input.getAttribute('data-nisn');
-                    const studentName = input.getAttribute('data-name');
-                    const score = parseFloat(scoreVal);
+        if (!Array.isArray(window.appState.academics)) {
+            window.appState.academics = [];
+        }
+        newRecords.forEach(record => {
+            const idx = window.appState.academics.findIndex(i => i.id === record.id);
+            if (idx > -1) window.appState.academics[idx] = record;
+            else window.appState.academics.push(record);
+        });
 
-                    const acadObj = {
-                        nisn: nisn,
-                        studentName: studentName,
-                        class: targetClass,
-                        subject: subject,
-                        type: type,
-                        score: score,
-                        materi: materi || '-',
-                        note: materi || '-',
-                        semester: window.appState.settings.semester,
-                        year: window.appState.settings.year,
-                        updatedAt: new Date().toISOString()
-                    };
-
-                    const customId = `${nisn}_${subject.replace(/\s+/g, '_')}_${type.replace(/\s+/g, '_')}_${Date.now()}`;
-                    const res = await window.saveDataToCloud('academics', acadObj, customId);
-                    if (res) savedCount++;
-                }
-            }
-
-            window.closeModal();
-            if (savedCount > 0) {
-                window.showToast(`Berhasil menyimpan ${savedCount} nilai siswa!`, "success");
-                if (typeof window.renderAcademics === 'function') {
-                    window.renderAcademics();
-                }
-            } else {
-                window.showToast("Tidak ada nilai yang diinputkan.", "info");
-            }
-        };
+        window.closeModal();
+        window.showToast(`Berhasil menyimpan ${prepareCount} nilai siswa ke Cloud!`, "success");
+        
+        if (typeof window.renderAcademics === 'function') {
+            window.renderAcademics();
+        }
+    } catch (err) {
+        console.error("Batch Academic Error:", err);
+        window.showToast("Gagal menyimpan data kolektif: " + (err.message || "Terjadi kesalahan jaringan"), "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fas fa-save"></i> Simpan Semua Nilai`;
+    }
+};
 		
         window.navigate = (pageId) => {
     
@@ -1999,8 +2272,9 @@
                 }
 
                 const now = new Date();
+                const jakartaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
                 const dateStr = getLocalDateString(now);
-                const timeStr = now.toTimeString().split(' ')[0].substring(0, 5);
+                const timeStr = String(jakartaTime.getHours()).padStart(2, '0') + ':' + String(jakartaTime.getMinutes()).padStart(2, '0');
                 
                 const existing = window.appState.attendance.find(a => a.nisn === nisn && a.date === dateStr);
                 if (existing) {
@@ -2829,8 +3103,9 @@
             const student = window.currentUser.data;
             const nisn = student.nisn;
             const now = new Date();
+            const jakartaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
             const dateStr = getLocalDateString(now);
-            const timeStr = now.toTimeString().split(' ')[0].substring(0, 5);
+            const timeStr = String(jakartaTime.getHours()).padStart(2, '0') + ':' + String(jakartaTime.getMinutes()).padStart(2, '0');
 
             const existing = window.appState.attendance.find(a => a.nisn === nisn && a.date === dateStr);
             if (existing) {
