@@ -1090,7 +1090,7 @@
     const inputs = document.querySelectorAll('input[name^="score_"]');
     const btn = document.getElementById('btn-submit-batch-acad');
     btn.disabled = true;
-    btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> Menyimpan ke Cloud...`;
+    btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> Menyimpan & Mengirim WA...`;
 
     if (!window.db) {
         window.showToast("Koneksi database offline!", "error");
@@ -1099,7 +1099,6 @@
         return;
     }
 
-    // Pengecekan keamanan jika modul Firestore writeBatch belum termuat
     if (!window.fs || typeof window.fs.writeBatch !== 'function') {
         window.showToast("Fungsi Batch Firestore belum siap. Silakan refresh halaman!", "error");
         btn.disabled = false;
@@ -1111,6 +1110,7 @@
         const batch = window.fs.writeBatch(window.db);
         let prepareCount = 0;
         const newRecords = [];
+        const waQueue = []; // Antrean pengiriman WA
 
         inputs.forEach(input => {
             const scoreVal = input.value.trim();
@@ -1135,7 +1135,6 @@
 
                 const cleanSubject = subject.replace(/[^a-zA-Z0-9]/g, '_');
                 const cleanType = type.replace(/[^a-zA-Z0-9]/g, '_');
-
                 const customId = `${nisn}_${cleanSubject}_${cleanType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
                 acadObj.id = customId;
 
@@ -1144,6 +1143,25 @@
 
                 newRecords.push(acadObj);
                 prepareCount++;
+
+                // Cari data siswa untuk mendapatkan nomor HP Orang Tua
+                const studentObj = (window.appState.students || []).find(s => s.nisn === nisn);
+                const parentPhone = studentObj ? (studentObj.phone || studentObj.hpOrtu || studentObj.noHp) : null;
+
+                if (parentPhone && parentPhone !== '-') {
+                    const waMsg = `*NOTIFIKASI NILAI AKADEMIK*\n` +
+                                  `=============================\n` +
+                                  `Nama   : *${studentName}*\n` +
+                                  `NISN   : ${nisn}\n` +
+                                  `Kelas  : ${targetClass}\n` +
+                                  `Mapel  : ${subject}\n` +
+                                  `Jenis  : ${type}\n` +
+                                  `Materi : ${materi || '-'}\n` +
+                                  `Nilai  : *${score}*\n` +
+                                  `=============================\n` +
+                                  `_Pesan otomatis dari ${window.appState.settings.schoolName || 'SIM-MIhuri'}._`;
+                    waQueue.push({ phone: parentPhone, message: waMsg });
+                }
             }
         });
 
@@ -1154,7 +1172,7 @@
             return;
         }
 
-        // Pengiriman massal dalam 1 kali request
+        // Simpan semua nilai secara kolektif ke Firestore Cloud
         await batch.commit();
 
         if (!Array.isArray(window.appState.academics)) {
@@ -1166,9 +1184,16 @@
             else window.appState.academics.push(record);
         });
 
+        // Kirim Notifikasi WhatsApp secara berurutan
+        if (waQueue.length > 0) {
+            for (const item of waQueue) {
+                await window.sendWaNotification(item.phone, item.message);
+            }
+        }
+
         window.closeModal();
-        window.showToast(`Berhasil menyimpan ${prepareCount} nilai siswa ke Cloud!`, "success");
-        
+        window.showToast(`Berhasil menyimpan ${prepareCount} nilai & mengirimkan notifikasi WA ke orang tua!`, "success");
+
         if (typeof window.renderAcademics === 'function') {
             window.renderAcademics();
         }
@@ -3348,132 +3373,193 @@ window.saveEditAttendance = async (e, id) => {
         };
 
         /* --- MODAL ABSENSI MANUAL --- */
-        window.openManualAttendanceModal = (defaultClass = null) => {
-            const classes = [...new Set(window.appState.students.map(s => s.class))].sort();
-            const selectedClass = defaultClass || classes[0] || '1A';
-            const todayStr = getLocalDateString();
-            const nowTimeStr = new Date().toTimeString().substring(0, 5);
+        // Modal Input Absensi Manual Kolektif Per Kelas
+window.openManualAttendanceModal = function() {
+    const students = window.getFilteredStudents();
+    const classes = [...new Set(students.map(s => s.class || s.kelas))].filter(Boolean).sort();
+    const currentClass = window.attClassFilter && window.attClassFilter !== 'Semua' 
+        ? window.attClassFilter 
+        : (classes[0] || '1A');
 
-            window.openModal(`
-                <div class="p-6 sm:p-8">
-                    <h3 class="text-xl font-extrabold text-slate-800 mb-2 flex items-center gap-2"><i class="fas fa-clipboard-user text-indigo-600"></i> Form Absensi Manual</h3>
-                    <p class="text-xs text-slate-500 mb-6 font-medium">Pilih kelas, tanggal, dan jam untuk menginput presensi siswa.</p>
-                    
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                        <div>
-                            <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Pilih Kelas</label>
-                            <select id="modal-att-class" onchange="window.updateManualAttendanceModalStudents()" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600">
-                                ${classes.length ? classes.map(c => `<option value="${c}" ${c===selectedClass?'selected':''}>Kelas ${c}</option>`).join('') : '<option value="1A">Kelas 1A</option>'}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Tanggal Absensi</label>
-                            <input type="date" id="modal-att-date" value="${todayStr}" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600">
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Jam / Sesi Pelajaran</label>
-                            <input type="text" id="modal-att-time" value="${nowTimeStr}" placeholder="07:00 - 08:00" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600">
-                        </div>
+    let filteredStudents = students.filter(s => (s.class || s.kelas) === currentClass);
+    if (typeof sortSiswaByName === 'function') {
+        filteredStudents = sortSiswaByName(filteredStudents);
+    }
+
+    const todayStr = getLocalDateString(new Date());
+
+    const classOptionsHtml = classes.map(c => `
+        <option value="${c}" ${c === currentClass ? 'selected' : ''}>Kelas ${c}</option>
+    `).join('');
+
+    let studentRowsHtml = filteredStudents.map((s, idx) => `
+        <tr class="border-b border-slate-100 text-xs sm:text-sm hover:bg-slate-50">
+            <td class="p-3 text-center font-bold text-slate-400">${idx + 1}</td>
+            <td class="p-3 font-extrabold text-slate-800">${s.name} <span class="block text-[10px] text-slate-400 font-medium">NISN: ${s.nisn}</span></td>
+            <td class="p-3 text-center">
+                <select name="status_${s.nisn}" data-nisn="${s.nisn}" data-name="${s.name}" class="p-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
+                    <option value="H" selected>Hadir (H)</option>
+                    <option value="T">Terlambat (T)</option>
+                    <option value="I">Izin (I)</option>
+                    <option value="S">Sakit (S)</option>
+                    <option value="A">Alpa (A)</option>
+                </select>
+            </td>
+            <td class="p-3">
+                <input type="text" name="note_${s.nisn}" placeholder="Catatan (opsional)" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-indigo-600 focus:bg-white">
+            </td>
+        </tr>
+    `).join('');
+
+    if (!filteredStudents.length) {
+        studentRowsHtml = `<tr><td colspan="4" class="p-6 text-center text-slate-400 font-semibold">Tidak ada siswa ditemukan di kelas ini.</td></tr>`;
+    }
+
+    window.openModal(`
+        <div class="p-6 sm:p-8">
+            <h3 class="text-xl font-extrabold text-slate-800 mb-2 flex items-center gap-2">
+                <i class="fas fa-user-check text-indigo-600"></i> Absensi Manual & Notifikasi WA Orang Tua
+            </h3>
+            <p class="text-xs text-slate-500 mb-6 font-medium">Isi kehadiran siswa secara kolektif. Notifikasi pesan WA otomatis akan dikirimkan ke nomor HP orang tua masing-masing.</p>
+
+            <form onsubmit="window.processManualAttendance(event)" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-4">
+                    <div>
+                        <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Pilih Kelas</label>
+                        <select id="manual-att-class" onchange="window.openManualAttendanceModalWithClass(this.value)" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm">
+                            ${classOptionsHtml}
+                        </select>
                     </div>
-
-                    <div id="modal-att-student-container" class="border border-slate-100 rounded-2xl overflow-hidden mb-6 max-h-[350px] overflow-y-auto custom-scrollbar">
-                        <!-- Student list rendered dynamically -->
-                    </div>
-
-                    <div class="flex justify-end gap-3 pt-2 border-t border-slate-100">
-                        <button type="button" onclick="window.closeModal()" class="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs sm:text-sm">Batal</button>
-                        <button type="button" onclick="window.saveBatchAttendanceFromModal()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md flex items-center gap-2">
-                            <i class="fas fa-save"></i> Simpan Absensi
-                        </button>
+                    <div>
+                        <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Tanggal Absensi</label>
+                        <input type="date" id="manual-att-date" value="${todayStr}" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm" required>
                     </div>
                 </div>
-            `, 'max-w-3xl');
 
-            setTimeout(() => { window.updateManualAttendanceModalStudents(); }, 50);
-        };
+                <div class="max-h-[45vh] overflow-y-auto border border-slate-200 rounded-2xl">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 uppercase text-[10px] font-black border-b border-slate-200 sticky top-0 bg-slate-100 z-10">
+                                <th class="p-3 text-center w-10">No</th>
+                                <th class="p-3">Nama Siswa</th>
+                                <th class="p-3 text-center w-36">Status Kehadiran</th>
+                                <th class="p-3">Catatan / Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody>${studentRowsHtml}</tbody>
+                    </table>
+                </div>
 
-        window.updateManualAttendanceModalStudents = () => {
-            const cls = document.getElementById('modal-att-class')?.value;
-            const dateVal = document.getElementById('modal-att-date')?.value || new Date().toISOString().split('T')[0];
-            const container = document.getElementById('modal-att-student-container');
-            if (!container || !cls) return;
+                <div class="pt-4 flex justify-end gap-3 border-t border-slate-100">
+                    <button type="button" onclick="window.closeModal()" class="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs sm:text-sm">Batal</button>
+                    <button type="submit" id="btn-submit-manual-att" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md flex items-center gap-2">
+                        <i class="fas fa-paper-plane"></i> Simpan & Kirim Notif WA
+                    </button>
+                </div>
+            </form>
+        </div>
+    `, 'max-w-4xl');
+};
 
-            // Mengambil siswa kelas terpilih dan mengurutkannya A-Z
-            const filteredStudents = window.appState.students
-                .filter(s => s.class === cls)
-                .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'id', { sensitivity: 'base' }));
+window.openManualAttendanceModalWithClass = function(selectedClass) {
+    window.attClassFilter = selectedClass;
+    window.openManualAttendanceModal();
+};
 
-            if (!filteredStudents.length) {
-                container.innerHTML = `<p class="p-6 text-center text-slate-400 font-semibold text-xs sm:text-sm">Tidak ada siswa terdaftar di Kelas ${cls}.</p>`;
-                return;
+// Pengolahan Simpan Absensi & Pengiriman Notifikasi WA
+window.processManualAttendance = async function(e) {
+    e.preventDefault();
+    const targetClass = document.getElementById('manual-att-class').value;
+    const dateStr = document.getElementById('manual-att-date').value;
+
+    const btn = document.getElementById('btn-submit-manual-att');
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> Menyimpan & Mengirim WA...`;
+
+    const statusSelects = document.querySelectorAll('select[name^="status_"]');
+    const now = new Date();
+    const jakartaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+    const timeStr = String(jakartaTime.getHours()).padStart(2, '0') + ':' + String(jakartaTime.getMinutes()).padStart(2, '0');
+
+    try {
+        let savedCount = 0;
+        const waQueue = [];
+
+        for (const sel of statusSelects) {
+            const nisn = sel.getAttribute('data-nisn');
+            const studentName = sel.getAttribute('data-name');
+            const status = sel.value;
+            const noteInput = document.querySelector(`input[name="note_${nisn}"]`);
+            const note = noteInput ? noteInput.value.trim() : '';
+
+            const attObj = {
+                nisn: nisn,
+                studentName: studentName,
+                class: targetClass,
+                date: dateStr,
+                time: timeStr,
+                status: status,
+                method: 'Manual (Guru)',
+                note: note || (status === 'H' ? 'Hadir Tepat Waktu' : status === 'T' ? 'Terlambat' : status === 'I' ? 'Izin' : status === 'S' ? 'Sakit' : 'Alpa'),
+                semester: window.appState.settings.semester,
+                year: window.appState.settings.year,
+                createdAt: new Date().toISOString()
+            };
+
+            const customId = `${nisn}_${dateStr}`;
+            const res = await window.saveDataToCloud('attendance', attObj, customId);
+
+            if (res) {
+                savedCount++;
+
+                // Menyiapkan Notifikasi WhatsApp untuk Orang Tua
+                const studentObj = (window.appState.students || []).find(s => s.nisn === nisn);
+                const parentPhone = studentObj ? (studentObj.phone || studentObj.hpOrtu || studentObj.noHp) : null;
+
+                if (parentPhone && parentPhone !== '-') {
+                    const statusLabel = status === 'H' ? 'Hadir Tepat Waktu' :
+                                        status === 'T' ? 'Terlambat' :
+                                        status === 'I' ? 'Izin' :
+                                        status === 'S' ? 'Sakit' : 'Alpa (Tanpa Keterangan)';
+                    
+                    const waMsg = `*NOTIFIKASI ABSENSI SISWA*\n` +
+                                  `=============================\n` +
+                                  `Nama   : *${studentName}*\n` +
+                                  `NISN   : ${nisn}\n` +
+                                  `Kelas  : ${targetClass}\n` +
+                                  `Tanggal: ${dateStr}\n` +
+                                  `Waktu  : ${timeStr} WIB\n` +
+                                  `Status : *${statusLabel}*\n` +
+                                  `Catatan: ${attObj.note}\n` +
+                                  `=============================\n` +
+                                  `_Pesan otomatis dari ${window.appState.settings.schoolName || 'SIM-MIhuri'}._`;
+
+                    waQueue.push({ phone: parentPhone, message: waMsg });
+                }
             }
+        }
 
-            let rows = filteredStudents.map((s, idx) => {
-                const existing = window.appState.attendance.find(a => a.nisn === s.nisn && a.date === dateVal);
-                const statusVal = existing ? existing.status : 'H';
-                return `
-                    <tr class="border-b border-slate-100 text-xs sm:text-sm hover:bg-slate-50/50">
-                        <td class="p-3.5 font-bold text-slate-400 text-center">${idx + 1}</td>
-                        <td class="p-3.5 font-bold text-slate-800">${s.name}</td>
-                        <td class="p-3.5 text-slate-500 font-medium">${s.nisn}</td>
-                        <td class="p-3.5">
-                            <div class="flex justify-center gap-3 font-extrabold">
-                                <label class="flex items-center gap-1 cursor-pointer text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 hover:bg-emerald-100"><input type="radio" name="modal_att_status_${s.nisn}" value="H" ${statusVal==='H'?'checked':''}> H</label>
-                                <label class="flex items-center gap-1 cursor-pointer text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 hover:bg-blue-100"><input type="radio" name="modal_att_status_${s.nisn}" value="I" ${statusVal==='I'?'checked':''}> I</label>
-                                <label class="flex items-center gap-1 cursor-pointer text-purple-600 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200 hover:bg-purple-100"><input type="radio" name="modal_att_status_${s.nisn}" value="S" ${statusVal==='S'?'checked':''}> S</label>
-                                <label class="flex items-center gap-1 cursor-pointer text-red-600 bg-red-50 px-2.5 py-1 rounded-lg border border-red-200 hover:bg-red-100"><input type="radio" name="modal_att_status_${s.nisn}" value="A" ${statusVal==='A'?'checked':''}> A</label>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-
-            container.innerHTML = `
-                <table class="w-full text-left border-collapse min-w-[500px]">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider text-[11px] font-extrabold border-b border-slate-100 sticky top-0 z-10">
-                            <th class="p-3.5 text-center w-12">No</th>
-                            <th class="p-3.5">Nama Siswa</th>
-                            <th class="p-3.5">NISN</th>
-                            <th class="p-3.5 text-center">Kehadiran (H / I / S / A)</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                </table>
-            `;
-        };
-
-        window.saveBatchAttendanceFromModal = async () => {
-            const cls = document.getElementById('modal-att-class')?.value;
-            const dateVal = document.getElementById('modal-att-date')?.value;
-            const timeVal = document.getElementById('modal-att-time')?.value || '07:00';
-            const students = window.appState.students.filter(s => s.class === cls);
-
-            if (!students.length) { window.showToast("Tidak ada siswa untuk disimpan", "error"); return; }
-
-            let savedCount = 0;
-            for (let s of students) {
-                const radios = document.getElementsByName(`modal_att_status_${s.nisn}`);
-                let statusVal = 'H';
-                for (let r of radios) { if (r.checked) statusVal = r.value; }
-
-                const attObj = {
-                    nisn: s.nisn, studentName: s.name, class: s.class,
-                    date: dateVal, time: timeVal, status: statusVal,
-                    method: 'Manual Batch Modal', note: `Absen Manual Jam ${timeVal}`,
-                    semester: window.appState.settings.semester, year: window.appState.settings.year,
-                    createdAt: new Date().toISOString()
-                };
-
-                const customId = `${s.nisn}_${dateVal}`;
-                const res = await window.saveDataToCloud('attendance', attObj, customId);
-                if (res) savedCount++;
+        // Mengirimkan Notifikasi WA secara bertahap
+        if (waQueue.length > 0) {
+            for (const item of waQueue) {
+                await window.sendWaNotification(item.phone, item.message);
             }
+        }
 
-            window.showToast(`Berhasil menyimpan ${savedCount} absensi siswa!`, "success");
-            window.closeModal();
+        window.closeModal();
+        window.showToast(`Berhasil menyimpan ${savedCount} data absensi & mengirimkan notifikasi WA ke orang tua!`, "success");
+
+        if (typeof window.renderAttendance === 'function') {
             window.renderAttendance();
-        };
+        }
+    } catch (err) {
+        console.error("Manual Attendance Error:", err);
+        window.showToast("Terjadi kesalahan saat menyimpan absensi manual.", "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fas fa-paper-plane"></i> Simpan & Kirim Notif WA`;
+    }
+};
 
 	/* --- HALAMAN AKADEMIK & NILAI SISWA --- */
 
