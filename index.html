@@ -19,6 +19,55 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
+
+        @media print {
+    /* Pengaturan Kertas A4 */
+    @page {
+        size: A4 portrait;
+        margin: 12mm 15mm 12mm 15mm;
+    }
+
+    /* Sembunyikan elemen navigasi dan tombol saat dicetak */
+    body * {
+        visibility: hidden;
+    }
+
+    #print-rapot-area, #print-rapot-area * {
+        visibility: visible;
+    }
+
+    #print-rapot-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        color: #000 !important;
+        background: #fff !important;
+        font-size: 11pt;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    /* Mencegah pemotongan baris tabel di tengah halaman */
+    table {
+        page-break-inside: avoid;
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+
+    th, td {
+        border: 1px solid #000 !important;
+        padding: 4px 6px !important;
+    }
+
+    /* Paksa pemisah halaman jika raport lebih dari 1 lembar */
+    .page-break {
+        page-break-before: always;
+    }
+}
+
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
         
@@ -2003,7 +2052,7 @@
             `;
         };
 
-        // 3. Fungsi Unduh Raport STS Format Word (.doc)
+        // 3. Fungsi Unduh Raport STS Format Word (.doc) - Presisi 1 Halaman A4
         window.downloadRapotSTSWord = function(nisn) {
             const student = (window.appState.students || []).find(s => s.nisn === nisn);
             if (!student) {
@@ -2041,11 +2090,11 @@
                 const info = window.getSTSPredikat(scoreNum);
                 return `
                     <tr>
-                        <td style="border:1px solid #000; padding:6px; text-align:center;">${idx + 1}</td>
-                        <td style="border:1px solid #000; padding:6px; font-weight:bold;">${a.subject || '-'}</td>
-                        <td style="border:1px solid #000; padding:6px; text-align:center; font-weight:bold;">${scoreNum}</td>
-                        <td style="border:1px solid #000; padding:6px; text-align:center;">${info.predikat}</td>
-                        <td style="border:1px solid #000; padding:6px; text-align:center;">${info.ket}</td>
+                        <td style="border:1px solid #000; padding:4px 5px; text-align:center;">${idx + 1}</td>
+                        <td style="border:1px solid #000; padding:4px 5px; font-weight:bold;">${a.subject || '-'}</td>
+                        <td style="border:1px solid #000; padding:4px 5px; text-align:center; font-weight:bold;">${scoreNum}</td>
+                        <td style="border:1px solid #000; padding:4px 5px; text-align:center;">${info.predikat}</td>
+                        <td style="border:1px solid #000; padding:4px 5px; text-align:center;">${info.ket}</td>
                     </tr>
                 `;
             }).join('');
@@ -2053,18 +2102,18 @@
             if (utsAcademics.length > 0) {
                 acadRowsWord += `
                     <tr style="background-color:#f2f2f2; font-weight:bold;">
-                        <td colspan="2" style="border:1px solid #000; padding:6px; text-align:right;">JUMLAH NILAI</td>
-                        <td style="border:1px solid #000; padding:6px; text-align:center;">${totalScore}</td>
-                        <td colspan="2" style="border:1px solid #000; padding:6px;"></td>
+                        <td colspan="2" style="border:1px solid #000; padding:4px 5px; text-align:right;">JUMLAH NILAI</td>
+                        <td style="border:1px solid #000; padding:4px 5px; text-align:center;">${totalScore}</td>
+                        <td colspan="2" style="border:1px solid #000; padding:4px 5px;"></td>
                     </tr>
                     <tr style="background-color:#eef2ff; font-weight:bold;">
-                        <td colspan="2" style="border:1px solid #000; padding:6px; text-align:right;">RATA-RATA NILAI UTS</td>
-                        <td style="border:1px solid #000; padding:6px; text-align:center;">${avgScore}</td>
-                        <td colspan="2" style="border:1px solid #000; padding:6px;"></td>
+                        <td colspan="2" style="border:1px solid #000; padding:4px 5px; text-align:right;">RATA-RATA NILAI UTS</td>
+                        <td style="border:1px solid #000; padding:4px 5px; text-align:center;">${avgScore}</td>
+                        <td colspan="2" style="border:1px solid #000; padding:4px 5px;"></td>
                     </tr>
                 `;
             } else {
-                acadRowsWord = `<tr><td colspan="5" style="border:1px solid #000; padding:8px; text-align:center;">Belum ada nilai UTS/STS.</td></tr>`;
+                acadRowsWord = `<tr><td colspan="5" style="border:1px solid #000; padding:6px; text-align:center;">Belum ada nilai UTS/STS.</td></tr>`;
             }
 
             const wordTemplate = `
@@ -2072,75 +2121,158 @@
                 <head>
                     <meta charset='utf-8'>
                     <title>Raport STS ${student.name}</title>
+                    <!--[if gte mso 9]>
+                    <xml>
+                        <w:WordDocument>
+                            <w:View>Print</w:View>
+                            <w:Zoom>100</w:Zoom>
+                            <w:DoNotOptimizeForBrowser/>
+                        </w:WordDocument>
+                    </xml>
+                    <![endif]-->
                     <style>
-                        body { font-family: 'Calibri', 'Arial', sans-serif; font-size: 11pt; line-height: 1.3; }
-                        table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-                        th { background-color: #f2f2f2; border: 1px solid #000; padding: 6px; text-align: left; font-size: 10pt; }
-                        td { border: 1px solid #000; padding: 6px; font-size: 10pt; }
-                        .kop-title { text-align: center; font-size: 15pt; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; }
-                        .kop-sub { text-align: center; font-size: 10pt; font-weight: bold; margin-bottom: 15px; }
-                        .info-table td { border: none; padding: 3px; font-size: 10pt; }
-                        .rank-box { background-color: #eef2ff; border: 1px solid #c7d2fe; padding: 8px; font-weight: bold; margin-bottom: 15px; }
+                        @page Section1 {
+                            size: 595.3pt 841.9pt; /* Ukuran A4 */
+                            margin: 1.2cm 1.5cm 1.2cm 1.5cm; /* Margin ringkas */
+                            mso-header-margin: 36.0pt;
+                            mso-footer-margin: 36.0pt;
+                            mso-paper-source: 0;
+                        }
+                        div.Section1 { page: Section1; }
+                        
+                        body { 
+                            font-family: 'Calibri', 'Arial', sans-serif; 
+                            font-size: 9.5pt; 
+                            line-height: 1.15; 
+                            color: #000;
+                        }
+                        table { 
+                            width: 100%; 
+                            border-collapse: collapse; 
+                            margin-bottom: 6px; 
+                        }
+                        th { 
+                            background-color: #f2f2f2; 
+                            border: 1px solid #000; 
+                            padding: 4px 5px; 
+                            text-align: left; 
+                            font-size: 9pt; 
+                        }
+                        td { 
+                            border: 1px solid #000; 
+                            padding: 4px 5px; 
+                            font-size: 9pt; 
+                        }
+                        .kop-title { 
+                            text-align: center; 
+                            font-size: 13pt; 
+                            font-weight: bold; 
+                            text-transform: uppercase; 
+                            margin-bottom: 2px; 
+                        }
+                        .kop-sub { 
+                            text-align: center; 
+                            font-size: 9.5pt; 
+                            font-weight: bold; 
+                            margin-bottom: 6px; 
+                        }
+                        .info-table td { 
+                            border: none; 
+                            padding: 2px 4px; 
+                            font-size: 9pt; 
+                        }
+                        .rank-box { 
+                            background-color: #eef2ff; 
+                            border: 1px solid #c7d2fe; 
+                            padding: 5px 8px; 
+                            font-weight: bold; 
+                            margin-bottom: 8px; 
+                            font-size: 9pt; 
+                        }
+                        .section-title {
+                            font-weight: bold;
+                            font-size: 9.5pt;
+                            display: block;
+                            margin-top: 4px;
+                            margin-bottom: 3px;
+                        }
                     </style>
                 </head>
                 <body>
-                    <div class="kop-title">${settings.schoolName || 'SIM-MIHURI'}</div>
-                    <div class="kop-sub">LAPORAN CAPAIAN HASIL BELAJAR SISWA<br>SUMATIF TENGAH SEMESTER (STS) - SEMESTER ${settings.semester || 'GANJIL'} TA ${settings.year || '2026/2027'}</div>
-                    <hr style="border: 1.5px solid #000; margin-bottom: 15px;">
+                    <div class="Section1">
+                        <div class="kop-title">${settings.schoolName || 'SIM-MIHURI'}</div>
+                        <div class="kop-sub">LAPORAN CAPAIAN HASIL BELAJAR SISWA<br>SUMATIF TENGAH SEMESTER (STS) - SEMESTER ${settings.semester || 'GANJIL'} TA ${settings.year || '2026/2027'}</div>
+                        <hr style="border: 1px solid #000; margin-top: 4px; margin-bottom: 8px;">
 
-                    <table class="info-table">
-                        <tr><td width="20%"><strong>Nama Siswa</strong></td><td width="30%">: ${student.name}</td><td width="20%"><strong>Kelas</strong></td><td width="30%">: ${student.class}</td></tr>
-                        <tr><td><strong>NISN</strong></td><td>: ${student.nisn}</td><td><strong>Tahun Ajaran</strong></td><td>: ${settings.year || '2026/2027'}</td></tr>
-                    </table>
-
-                    <div class="rank-box">
-                        CAPAIAN PERINGKAT KELAS: Peringkat Ke-${myRankInfo.rank} dari ${myRankInfo.totalStudents} Siswa (Rata-rata UTS: ${myRankInfo.avg})
-                    </div>
-
-                    <strong>A. Tabel Nilai Sumatif Tengah Semester (UTS)</strong>
-                    <table>
-                        <thead>
+                        <table class="info-table">
                             <tr>
-                                <th style="text-align:center; width:30px;">No</th>
-                                <th>Mata Pelajaran</th>
-                                <th style="text-align:center; width:70px;">Nilai UTS</th>
-                                <th style="text-align:center; width:60px;">Predikat</th>
-                                <th style="text-align:center; width:110px;">Keterangan</th>
+                                <td width="18%"><strong>Nama Siswa</strong></td>
+                                <td width="32%">: ${student.name}</td>
+                                <td width="18%"><strong>Kelas</strong></td>
+                                <td width="32%">: ${student.class}</td>
                             </tr>
-                        </thead>
-                        <tbody>${acadRowsWord}</tbody>
-                    </table>
+                            <tr>
+                                <td><strong>NISN</strong></td>
+                                <td>: ${student.nisn}</td>
+                                <td><strong>Tahun Ajaran</strong></td>
+                                <td>: ${settings.year || '2026/2027'}</td>
+                            </tr>
+                        </table>
 
-                    <strong>B. Rekapitulasi Kehadiran & Catatan</strong>
-                    <table>
-                        <tr>
-                            <td width="40%" style="vertical-align:top;">
-                                <strong>Kehadiran:</strong><br>
-                                - Hadir (H): ${countH} Hari<br>
-                                - Izin (I): ${countI} Hari<br>
-                                - Sakit (S): ${countS} Hari<br>
-                                - Alpa (A): ${countA} Hari
-                            </td>
-                            <td width="60%" style="vertical-align:top;">
-                                <strong>Catatan Wali Kelas:</strong><br>
-                                <em>"${catatanWaliKelasWord}"</em>
-                            </td>
-                        </tr>
-                    </table>
+                        <div class="rank-box">
+                            CAPAIAN PERINGKAT KELAS: Peringkat Ke-${myRankInfo.rank} dari ${myRankInfo.totalStudents} Siswa (Rata-rata UTS: ${myRankInfo.avg})
+                        </div>
 
-                    <br><br>
-                    <table class="info-table" style="text-align:center; margin-top:20px;">
-                        <tr>
-                            <td width="33%">Orang Tua / Wali<br><br><br><br>( .................... )</td>
-                            <td width="33%">Wali Kelas ${student.class}<br><br><br><br><u>${waliKelasName}</u></td>
-                            <td width="34%">
-                                Diberikan di: Bluri<br>
-                                Tanggal: <u>${settings.stsDate ? new Date(settings.stsDate).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'}) : '....................'}</u><br><br>
-                                Kepala Sekolah<br><br><br><br>
-                                <u>${settings.principal || 'Kepala Sekolah'}</u>
-                            </td>
-                        </tr>
-                    </table>
+                        <span class="section-title">A. Tabel Nilai Sumatif Tengah Semester (UTS)</span>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="text-align:center; width:25px;">No</th>
+                                    <th>Mata Pelajaran</th>
+                                    <th style="text-align:center; width:65px;">Nilai UTS</th>
+                                    <th style="text-align:center; width:55px;">Predikat</th>
+                                    <th style="text-align:center; width:100px;">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody>${acadRowsWord}</tbody>
+                        </table>
+
+                        <span class="section-title">B. Rekapitulasi Kehadiran & Catatan</span>
+                        <table>
+                            <tr>
+                                <td width="38%" style="vertical-align:top; font-size:8.5pt;">
+                                    <strong>Kehadiran:</strong><br>
+                                    - Hadir (H): ${countH} Hari<br>
+                                    - Izin (I): ${countI} Hari<br>
+                                    - Sakit (S): ${countS} Hari<br>
+                                    - Alpa (A): ${countA} Hari
+                                </td>
+                                <td width="62%" style="vertical-align:top; font-size:8.5pt;">
+                                    <strong>Catatan Wali Kelas:</strong><br>
+                                    <em>"${catatanWaliKelasWord}"</em>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <table class="info-table" style="text-align:center; margin-top:10px;">
+                            <tr>
+                                <td width="33%" style="vertical-align:top;">
+                                    Orang Tua / Wali<br><br><br>
+                                    ( .................... )
+                                </td>
+                                <td width="33%" style="vertical-align:top;">
+                                    Wali Kelas ${student.class}<br><br><br>
+                                    <u><strong>${waliKelasName}</strong></u>
+                                </td>
+                                <td width="34%" style="vertical-align:top;">
+                                    Diberikan di: Bluri<br>
+                                    Tanggal: <u>${settings.stsDate ? new Date(settings.stsDate).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'}) : '....................'}</u><br>
+                                    Kepala Sekolah<br><br><br>
+                                    <u><strong>${settings.principal || 'Kepala Sekolah'}</strong></u>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
                 </body>
                 </html>
             `;
@@ -6065,7 +6197,6 @@ window.autoFillSppNote = (month) => {
 
             window.showToast(`Berhasil mengunduh Leger STS Kelas ${className} (Word F4 Landscape)!`, "success");
         };
-		
     </script>
 </body>
 </html>
