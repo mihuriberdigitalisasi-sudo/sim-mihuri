@@ -15,19 +15,15 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <!-- SheetJS for Excel Export -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-    <!-- CHART.JS TAMBAHKAN DI SINI -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
 
-        @media print {
-    /* Pengaturan Kertas A4 */
+    @media print {
     @page {
         size: A4 portrait;
-        margin: 12mm 15mm 12mm 15mm;
+        margin: 10mm 12mm 10mm 12mm;
     }
 
-    /* Sembunyikan elemen navigasi dan tombol saat dicetak */
     body * {
         visibility: hidden;
     }
@@ -43,28 +39,34 @@
         width: 100%;
         color: #000 !important;
         background: #fff !important;
-        font-size: 11pt;
+        font-size: 9.5pt;
+        line-height: 1.15;
     }
 
     .no-print {
         display: none !important;
     }
 
-    /* Mencegah pemotongan baris tabel di tengah halaman */
+    .page-break {
+        page-break-before: always !important;
+        break-before: page !important;
+    }
+
+    .single-student-page {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        height: 100vh;
+        box-sizing: border-box;
+    }
+
     table {
-        page-break-inside: avoid;
-        width: 100% !important;
         border-collapse: collapse !important;
+        width: 100% !important;
     }
 
     th, td {
         border: 1px solid #000 !important;
-        padding: 4px 6px !important;
-    }
-
-    /* Paksa pemisah halaman jika raport lebih dari 1 lembar */
-    .page-break {
-        page-break-before: always;
+        padding: 3px 5px !important;
     }
 }
 
@@ -347,20 +349,6 @@
 
             // Kembalikan daftar kelas unik
             return [...new Set(classes)].filter(Boolean).sort();
-        };
-
-        // Pembaharuan getFilteredStudents agar Sinkron dengan Pembatasan Baru
-        window.getFilteredStudents = function() {
-            let students = window.appState.students || [];
-            const userRole = String((window.currentUser && window.currentUser.role) || '').toUpperCase();
-            
-            if (userRole === 'GURU') {
-                const teacherClasses = window.getTeacherManagedClasses();
-                if (teacherClasses.length > 0) {
-                    students = students.filter(s => teacherClasses.includes(s.class || s.kelas));
-                }
-            }
-            return students;
         };
 
         // 2. Render Halaman Absensi Kehadiran
@@ -1256,6 +1244,48 @@
 };
 		
         window.navigate = (pageId) => {
+            if (window.innerWidth < 1024 && !document.getElementById('sidebar-overlay').classList.contains('hidden')) {
+                window.toggleSidebar();
+            }
+
+            document.querySelectorAll('#nav-menu a').forEach(el => {
+                el.classList.remove('bg-white', 'text-indigo-700', 'shadow-sm', 'border-slate-100');
+                if(el.querySelector('i')) el.querySelector('i').classList.remove('text-indigo-600');
+            });
+
+            const activeNav = document.getElementById(`nav-${pageId}`);
+            if (activeNav) {
+                activeNav.classList.add('bg-white', 'text-indigo-700', 'shadow-sm', 'border-slate-100');
+                if(activeNav.querySelector('i')) activeNav.querySelector('i').classList.add('text-indigo-600');
+            }
+
+            document.getElementById('page-title').textContent = document.querySelector(`#nav-${pageId} span`)?.textContent || 'Portal';
+
+            const mainContent = document.getElementById('main-content');
+            if (mainContent) {
+                mainContent.scrollTop = 0;
+            }
+            window.scrollTo(0, 0); 
+
+            if (pageId === 'dashboard') window.renderDashboard();
+            else if (pageId === 'student_attendance') window.renderStudentAttendanceView();
+            else if (pageId === 'attendance') window.renderAttendance();
+            else if (pageId === 'students') window.renderStudents();
+            else if (pageId === 'teachers') window.renderTeachers();
+            else if (pageId === 'academics') window.renderAcademics();
+            else if (pageId === 'catatan') window.renderCatatan();
+            else if (pageId === 'payments') window.renderPayments();
+            else if (pageId === 'schedules') window.renderSchedules();
+            else if (pageId === 'announcements') window.renderAnnouncements();
+            else if (pageId === 'recap') window.renderRecapData();
+            else if (pageId === 'laporan') window.renderLaporan();
+            else if (pageId === 'rapot_sts') window.renderRapotSTS();
+            else if (pageId === 'leger') window.renderLegerNilai();
+            else if (pageId === 'backup') window.renderBackup();
+            else if (pageId === 'settings') window.renderSettings();
+            else if (pageId === 'rapot') window.renderRapot();
+            else if (pageId === 'homerooms') window.renderHomerooms();
+        };
     
     /* ==========================================================================
            MODUL MASTER WALI KELAS
@@ -1681,58 +1711,7 @@
             }
         };
 
-    // 1. Otomatis tutup sidebar jika di tampilan HP/Mobile
-    if (window.innerWidth < 1024 && !document.getElementById('sidebar-overlay').classList.contains('hidden')) {
-        window.toggleSidebar();
-    }
-    
-    // 2. Reset status aktif semua tombol menu
-    document.querySelectorAll('#nav-menu a').forEach(el => {
-        el.classList.remove('bg-white', 'text-indigo-700', 'shadow-sm', 'border-slate-100');
-        if(el.querySelector('i')) el.querySelector('i').classList.remove('text-indigo-600');
-    });
-    
-    // 3. Set status aktif pada menu yang diklik
-    const activeNav = document.getElementById(`nav-${pageId}`);
-    if (activeNav) {
-        activeNav.classList.add('bg-white', 'text-indigo-700', 'shadow-sm', 'border-slate-100');
-        if(activeNav.querySelector('i')) activeNav.querySelector('i').classList.add('text-indigo-600');
-    }
-    
-    // 4. Ubah Judul Halaman di Header
-    document.getElementById('page-title').textContent = document.querySelector(`#nav-${pageId} span`)?.textContent || 'Portal';
-
-    // =========================================================================
-    // KODE TAMBAHAN: MENGEMBALIKAN POSISI SCROLL KE PALING ATAS
-    // =========================================================================
-    const mainContent = document.getElementById('main-content');
-    if (mainContent) {
-        mainContent.scrollTop = 0; // Mengatur scroll kontener utama ke atas
-    }
-    window.scrollTo(0, 0); // Pengaman ekstra untuk scroll layar utama
-    // =========================================================================
-    
-    // 5. Render Halaman Sesuai Menu yang Diklik
-    if (pageId === 'dashboard') window.renderDashboard();
-    else if (pageId === 'student_attendance') window.renderStudentAttendanceView();
-    else if (pageId === 'attendance') window.renderAttendance();
-    else if (pageId === 'students') window.renderStudents();
-    else if (pageId === 'teachers') window.renderTeachers();
-    else if (pageId === 'academics') window.renderAcademics();
-    else if (pageId === 'catatan') window.renderCatatan();
-    else if (pageId === 'payments') window.renderPayments();
-    else if (pageId === 'schedules') window.renderSchedules();
-    else if (pageId === 'announcements') window.renderAnnouncements();
-    else if (pageId === 'recap') window.renderRecapData();
-    else if (pageId === 'laporan') window.renderLaporan();
-    else if (pageId === 'rapot_sts') window.renderRapotSTS();
-    else if (pageId === 'leger') window.renderLegerNilai();
-    else if (pageId === 'backup') window.renderBackup();
-    else if (pageId === 'settings') window.renderSettings();
-    else if (pageId === 'rapot') window.renderRapot();
-    else if (pageId === 'homerooms') window.renderHomerooms();
-};
-/* ==========================================================================
+		/* ==========================================================================
            MODUL RAPORT STS (CATATAN WALI KELAS DINAMIS)
            ========================================================================== */
 
@@ -2042,9 +2021,17 @@
                                 ${studentOptionsHtml || '<option value="">Tidak Ada Siswa</option>'}
                             </select>
                         ` : ''}
-                        <button onclick="window.downloadRapotSTSWord('${currentNisn}')" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md transition-all flex items-center gap-2">
-                            <i class="fas fa-file-word"></i> Unduh Word (.doc)
-                        </button>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <!-- Tombol Unduh Word Per Siswa -->
+                            <button onclick="window.downloadRapotSTSWord('${currentNisn}')" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md transition-all flex items-center gap-2">
+                                <i class="fas fa-file-word"></i> Unduh Word (.doc)
+                            </button>
+                            
+                            <!-- Tombol Unduh / Cetak Raport Per Kelas -->
+                            <button onclick="window.printRapotSTSPerKelas('${currentClass}')" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md transition-all flex items-center gap-2">
+                                <i class="fas fa-print"></i> Unduh Raport Perkelas
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -2288,6 +2275,211 @@
             URL.revokeObjectURL(url);
             window.showToast("Berhasil mengunduh Raport STS Word!", "success");
         };
+
+        window.printRapotSTSPerKelas = function(className) {
+    const classStudents = (window.appState.students || [])
+        .filter(s => s.class === className)
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'id', { sensitivity: 'base' }));
+
+    if (!classStudents.length) {
+        window.showToast(`Tidak ada siswa di kelas ${className}!`, "error");
+        return;
+    }
+
+    const settings = window.appState.settings || {};
+    const homeroomObj = (window.appState.homerooms || []).find(h => h.class === className);
+    const waliKelasName = homeroomObj ? homeroomObj.teacherName : (settings.treasurer || 'Wali Kelas');
+    const rankData = window.getSTSClassRanks(className);
+    const allAcademics = window.appState.academics || [];
+    const allAttendance = window.appState.attendance || [];
+
+    let fullClassRapotHtml = '';
+
+    classStudents.forEach((student, index) => {
+        const nisn = student.nisn;
+        const myRankInfo = rankData[nisn] || { rank: '-', totalStudents: classStudents.length, avg: '0' };
+
+        const utsAcademics = allAcademics.filter(a => 
+            a.nisn === nisn && (a.type === 'UTS / STS' || a.type === 'UTS' || a.type === 'STS')
+        );
+        const totalScore = utsAcademics.reduce((sum, a) => sum + (parseFloat(a.score) || 0), 0);
+        const avgScore = utsAcademics.length > 0 ? (totalScore / utsAcademics.length).toFixed(1) : '0';
+
+        const myAtt = allAttendance.filter(a => a.nisn === nisn);
+        const countH = myAtt.filter(a => a.status === 'H').length;
+        const countI = myAtt.filter(a => a.status === 'I').length;
+        const countS = myAtt.filter(a => a.status === 'S').length;
+        const countA = myAtt.filter(a => a.status === 'A').length;
+
+        const catatanText = window.getCatatanWaliKelas(student.name, avgScore, countA, countS, countI);
+
+        let acadRows = utsAcademics.map((a, idx) => {
+            const scoreNum = parseFloat(a.score) || 0;
+            const info = window.getSTSPredikat(scoreNum);
+            return `
+                <tr>
+                    <td style="text-align:center; padding: 6px 8px;">${idx + 1}</td>
+                    <td style="font-weight:bold; padding: 6px 8px;">${a.subject || '-'}</td>
+                    <td style="text-align:center; font-weight:bold; padding: 2px 4px;">${scoreNum}</td>
+                    <td style="text-align:center; padding: 6px 8px;">${info.predikat}</td>
+                    <td style="text-align:center; padding: 6px 8px;">${info.ket}</td>
+                </tr>
+            `;
+        }).join('');
+
+        if (utsAcademics.length > 0) {
+            acadRows += `
+                <tr style="background:#f8fafc; font-weight:bold;">
+                    <td colspan="2" style="text-align:right; padding: 2px 4px;">JUMLAH NILAI</td>
+                    <td style="text-align:center; padding: 2px 4px;">${totalScore}</td>
+                    <td colspan="2" style="padding: 2px 4px;"></td>
+                </tr>
+                <tr style="background:#f1f5f9; font-weight:bold;">
+                    <td colspan="2" style="text-align:right; padding: 2px 4px;">RATA-RATA NILAI UTS</td>
+                    <td style="text-align:center; padding: 2px 4px;">${avgScore}</td>
+                    <td colspan="2" style="padding: 2px 4px;"></td>
+                </tr>
+            `;
+        } else {
+            acadRows = `<tr><td colspan="5" style="text-align:center; font-style:italic; padding: 4px;">Belum ada nilai UTS/STS.</td></tr>`;
+        }
+
+        // Sisipkan Pemisah Halaman Khusus Word untuk siswa kedua dan seterusnya
+        const wordPageBreak = index > 0 ? `<br style="page-break-before:always; clear:both; mso-break-type:page-break;" />` : '';
+
+        fullClassRapotHtml += `
+            ${wordPageBreak}
+            <div class="single-student-page" style="font-family: 'Times New Roman', serif;">
+                <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 2px; margin-bottom: 4px;">
+                    <h2 style="font-size: 18pt; font-weight: bold; margin: 0; text-transform: uppercase;">${settings.schoolName || 'MI IHYAUL ULUM BLURI'}</h2>
+                    <p style="font-size: 10pt; font-weight: bold; margin: 1px 0;">LAPORAN CAPAIAN HASIL BELAJAR SISWA</p>
+                    <p style="font-size: 8.5pt; font-weight: bold; margin: 0; text-transform: uppercase;">SUMATIF TENGAH SEMESTER (STS) - SEMESTER ${settings.semester || 'GANJIL'} TA ${settings.year || '2026/2027'}</p>
+                </div>
+
+                <table style="width: 100%; border: none; margin-bottom: 4px; font-size: 8pt;">
+                    <tr>
+                        <td style="border:none; width: 15%; padding: 1px;">Nama Siswa</td>
+                        <td style="border:none; width: 35%; padding: 1px;">: <strong>${student.name}</strong></td>
+                        <td style="border:none; width: 15%; padding: 1px;">Kelas</td>
+                        <td style="border:none; width: 35%; padding: 1px;">: <strong>${student.class}</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="border:none; padding: 1px;">NIS / NISN</td>
+                        <td style="border:none; padding: 1px;">: <strong>${student.nisn}</strong></td>
+                        <td style="border:none; padding: 1px;">Tahun Ajaran</td>
+                        <td style="border:none; padding: 1px;">: <strong>${settings.year || '2026/2027'}</strong></td>
+                    </tr>
+                </table>
+
+                <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 2px 5px; font-size: 7.5pt; font-weight: bold; margin-bottom: 4px;">
+                    CAPAIAN PERINGKAT KELAS: Peringkat Ke-${myRankInfo.rank} dari ${myRankInfo.totalStudents} Siswa (Rata-rata UTS: ${myRankInfo.avg})
+                </div>
+
+                <div style="font-size: 8pt; font-weight: bold; margin-bottom: 2px;">A. Tabel Nilai Sumatif Tengah Semester (UTS)</div>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 4px; font-size: 9.5pt;" border="1">
+                    <thead>
+                        <tr style="background-color: #f1f5f9;">
+                            <th style="width: 20px; text-align:center; padding: 3px 2px;">No</th>
+                            <th style="padding: 3px 2px;">Mata Pelajaran</th>
+                            <th style="width: 50px; text-align:center; padding: 3px 2px;">Nilai UTS</th>
+                            <th style="width: 40px; text-align:center; padding: 3px 2px;">Predikat</th>
+                            <th style="width: 90px; text-align:center; padding: 3px 2px;">Keterangan</th>
+                        </tr>
+                    </thead>
+                    <tbody>${acadRows}</tbody>
+                </table>
+
+                <div style="font-size: 10pt; font-weight: bold; margin-bottom: 2px;">B. Rekapitulasi Kehadiran & Catatan</div>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 7.5pt;" border="1">
+                    <tr>
+                        <td style="width: 30%; vertical-align: top; padding: 3px;">
+                            <strong>Kehadiran:</strong><br>
+                            - Hadir (H): ${countH} Hari<br>
+                            - Izin (I): ${countI} Hari<br>
+                            - Sakit (S): ${countS} Hari<br>
+                            - Alpa (A): ${countA} Hari
+                        </td>
+                        <td style="width: 70%; vertical-align: top; padding: 3px;">
+                            <strong>Catatan Wali Kelas:</strong><br>
+                            <em>"${catatanText}"</em>
+                        </td>
+                    </tr>
+                </table>
+
+                <table style="width: 100%; border: none; text-align: center; font-size: 7.5pt; margin-top: 4px;">
+                    <tr>
+                        <td style="border:none; width: 33%; vertical-align: top;">
+                            Orang Tua / Wali Murid<br><br><br>
+                            ( .................... )
+                        </td>
+                        <td style="border:none; width: 33%; vertical-align: top;">
+                            Wali Kelas ${student.class}<br><br><br>
+                            <u><strong>${waliKelasName}</strong></u>
+                        </td>
+                        <td style="border:none; width: 34%; vertical-align: top;">
+                            Diberikan di: Bluri<br>
+                            Tanggal: <u>${settings.stsDate ? new Date(settings.stsDate).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'}) : '....................'}</u><br>
+                            Kepala Sekolah<br><br><br>
+                            <u><strong>${settings.principal || 'Kepala Sekolah'}</strong></u>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        `;
+    });
+
+    const wordHeader = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+              xmlns:w='urn:schemas-microsoft-com:office:word' 
+              xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+            <meta charset='utf-8'>
+            <title>Raport STS Kelas ${className}</title>
+            <!--[if gte mso 9]>
+            <xml>
+                <w:WordDocument>
+                    <w:View>Print</w:View>
+                    <w:Zoom>100</w:Zoom>
+                    <w:DoNotOptimizeForCustomXew/>
+                </w:WordDocument>
+            </xml>
+            <![endif]-->
+            <style>
+                @page Section1 {
+                    size: 595.3pt 841.9pt; /* A4 */
+                    margin: 15.0pt 20.0pt 15.0pt 20.0pt; /* Margin Sangat Ringkas */
+                    mso-header-margin: 0pt;
+                    mso-footer-margin: 0pt;
+                }
+                div.Section1 { page: Section1; }
+                body { font-family: 'Times New Roman', serif; margin: 0; padding: 0; }
+                table { border-collapse: collapse; width: 100%; }
+                td, th { border: 1pt solid #000; }
+            </style>
+        </head>
+        <body>
+            <div class="Section1">
+                ${fullClassRapotHtml}
+            </div>
+        </body>
+        </html>
+    `;
+
+    window.showToast(`Mengunduh Raport Kelas ${className} (.doc)...`, "info");
+
+    const blob = new Blob(['\ufeff', wordHeader], {
+        type: 'application/msword'
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Raport_STS_Kelas_${className}.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+};
 
         // --- KODE BARU TAMBAHAN SCAN QR LOGIN ---
         window.startLoginQrScanner = async () => {
@@ -6181,21 +6373,19 @@ window.autoFillSppNote = (month) => {
                 </html>
             `;
 
-            // Proses Download sebagai file .doc yang dapat dibuka di MS Word
-            const blob = new Blob(['\ufeff' + wordDocumentContent], {
+            const blob = new Blob(['\ufeff', wordDocumentContent], {
                 type: 'application/msword'
             });
 
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Leger_STS_Kelas_${className}_${new Date().toISOString().split('T')[0]}.doc`;
+            a.download = `Leger_STS_Kelas_${className}.doc`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-
-            window.showToast(`Berhasil mengunduh Leger STS Kelas ${className} (Word F4 Landscape)!`, "success");
+            window.showToast("Berhasil mengunduh Leger STS Word!", "success");
         };
     </script>
 </body>
