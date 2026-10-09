@@ -167,33 +167,36 @@
         <!-- Sidebar Overlay for Mobile -->
         <div id="sidebar-overlay" class="fixed inset-0 bg-slate-900/60 z-20 hidden lg:hidden backdrop-blur-sm" onclick="window.toggleSidebar()"></div>
         
-        <aside class="fixed inset-y-0 left-0 transform -translate-x-full lg:relative lg:translate-x-0 w-72 bg-white text-slate-700 flex flex-col transition-transform duration-300 z-30 flex-shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.04)] border-r border-slate-200" id="sidebar">
-            <div class="p-5 sm:p-6 flex items-center justify-between border-b border-slate-100 bg-white">
+        <aside class="fixed inset-y-0 left-0 transform -translate-x-full lg:relative lg:translate-x-0 w-72 bg-purple-900 text-purple-100 flex flex-col transition-transform duration-300 z-30 flex-shrink-0 shadow-2xl border-r border-purple-800/50" id="sidebar">
+            <!-- Header Sidebar -->
+            <div class="p-5 sm:p-6 flex items-center justify-between border-b border-purple-800/60 bg-purple-950/40 backdrop-blur-sm">
                 <div class="flex items-center gap-3.5 w-full">
-                    <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30 flex-shrink-0">
+                    <div class="w-10 h-10 rounded-xl bg-purple-600 flex items-center justify-center text-white shadow-lg shadow-purple-900/50 flex-shrink-0 border border-purple-400/30">
                         <i class="fas fa-school text-lg"></i>
                     </div>
                     <div class="flex-1 overflow-hidden">
-                        <span class="font-extrabold text-[15px] leading-tight text-slate-800 truncate block" id="sidebar-school-name">SIM-MIhuri</span>
-                        <span class="text-[10px] uppercase font-bold tracking-widest text-indigo-500">Versi 0.0.2-Final</span>
+                        <span class="font-extrabold text-[15px] leading-tight text-white truncate block" id="sidebar-school-name">SIM-MIhuri</span>
+                        <span class="text-[10px] uppercase font-bold tracking-widest text-purple-300">Versi 0.0.2-Final</span>
                     </div>
                 </div>
-                <button class="lg:hidden text-slate-400 hover:text-slate-600 flex-shrink-0 p-1" onclick="window.toggleSidebar()"><i class="fas fa-times text-xl"></i></button>
+                <button class="lg:hidden text-purple-300 hover:text-white flex-shrink-0 p-1" onclick="window.toggleSidebar()"><i class="fas fa-times text-xl"></i></button>
             </div>
             
-            <div class="flex-1 overflow-y-auto py-4 sm:py-6 px-3 sm:px-4 custom-scrollbar bg-slate-50/30">
+            <!-- Menu Navigasi -->
+            <div class="flex-1 overflow-y-auto py-4 sm:py-6 px-3 sm:px-4 custom-scrollbar bg-purple-900/50">
                 <nav class="space-y-1.5" id="nav-menu"></nav>
             </div>
             
-            <div class="p-4 sm:p-5 border-t border-slate-100 bg-white">
-                <div class="flex items-center gap-3 mb-3 sm:mb-4 bg-slate-50 p-2.5 sm:p-3 rounded-xl border border-slate-100">
-                    <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-base sm:text-lg border border-indigo-200 shadow-inner" id="user-avatar">U</div>
+            <!-- Footer User & Tombol Keluar -->
+            <div class="p-4 sm:p-5 border-t border-purple-800/60 bg-purple-950/40 backdrop-blur-sm">
+                <div class="flex items-center gap-3 mb-3 sm:mb-4 bg-purple-800/40 p-2.5 sm:p-3 rounded-2xl border border-purple-700/50 shadow-inner">
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold text-base sm:text-lg border border-purple-400/30 shadow-md" id="user-avatar">U</div>
                     <div class="overflow-hidden flex-1">
-                        <p class="text-xs sm:text-sm font-bold text-slate-800 truncate" id="user-name">User</p>
-                        <p class="text-[10px] sm:text-[11px] font-bold text-indigo-600 uppercase tracking-widest truncate" id="user-role">Role</p>
+                        <p class="text-xs sm:text-sm font-extrabold text-white truncate" id="user-name">User</p>
+                        <p class="text-[10px] sm:text-[11px] font-bold text-purple-300 uppercase tracking-widest truncate" id="user-role">Role</p>
                     </div>
                 </div>
-                <button onclick="window.logout()" class="w-full py-2.5 sm:py-3 px-4 bg-white border-2 border-red-100 hover:bg-red-50 hover:border-red-200 text-red-600 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2">
+                <button onclick="window.logout()" class="w-full py-2.5 sm:py-3 px-4 bg-purple-800/30 hover:bg-rose-600/90 border border-purple-700/50 hover:border-rose-500 text-purple-200 hover:text-white rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-sm">
                     <i class="fas fa-power-off"></i> Keluar
                 </button>
             </div>
@@ -992,12 +995,8 @@
                 
                 { id: 'recap', icon: 'fa-table', text: 'Rekap Data', roles: [ROLES.ADMIN] },
                 { id: 'laporan', icon: 'fa-file-excel', text: 'Laporan Data', roles: [ROLES.ADMIN] },
-                
-                // --- PERBAIKAN: DITAMBAHKAN HAK AKSES WALI KELAS PADA MENU RAPORT STS ---
                 { id: 'rapot_sts', icon: 'fa-file-invoice', text: 'Raport STS', roles: [ROLES.ADMIN, ROLES.SISWA, ...(isWaliKelas ? [ROLES.GURU] : [])] },
-                
                 { id: 'leger', icon: 'fa-table-list', text: 'Leger Nilai', roles: [ROLES.ADMIN, ...(isWaliKelas ? [ROLES.GURU] : [])] },
-                
                 { id: 'backup', icon: 'fa-database', text: 'Backup & Restore', roles: [ROLES.ADMIN] },
                 { id: 'settings', icon: 'fa-cog', text: 'Pengaturan', roles: [ROLES.ADMIN] }
             ];
@@ -1005,8 +1004,8 @@
             menuItems.forEach(item => {
                 if (item.roles.includes(window.currentUser.role)) {
                     nav.innerHTML += `
-                        <a href="#" onclick="window.navigate('${item.id}')" id="nav-${item.id}" class="flex items-center gap-3.5 px-4 py-3 sm:py-3.5 rounded-2xl text-slate-600 hover:bg-white hover:text-indigo-700 hover:shadow-sm border border-transparent hover:border-slate-100 transition-all font-bold text-xs sm:text-sm group">
-                            <div class="w-7 flex justify-center"><i class="fas ${item.icon} text-base sm:text-lg text-slate-400 group-hover:text-indigo-600 transition-colors"></i></div>
+                        <a href="#" onclick="window.navigate('${item.id}')" id="nav-${item.id}" class="flex items-center gap-3.5 px-4 py-3 sm:py-3.5 rounded-2xl text-purple-200 hover:bg-purple-800/60 hover:text-white border border-transparent transition-all font-bold text-xs sm:text-sm group">
+                            <div class="w-7 flex justify-center"><i class="fas ${item.icon} text-base sm:text-lg text-purple-300 group-hover:text-white transition-colors"></i></div>
                             <span>${item.text}</span>
                         </a>
                     `;
@@ -1019,93 +1018,114 @@
            FUNGSI BATCH/KOLEKTIF NILAI AKADEMIK (DENGAN INPUT FORM MATERI)
            ========================================================================== */
         window.openBatchAcademicModal = function() {
-            const students = window.getFilteredStudents();
-            const classes = [...new Set(students.map(s => s.class))].sort();
-            const currentClass = window.acadClassFilter && window.acadClassFilter !== 'Semua' 
-                ? window.acadClassFilter 
-                : (classes[0] || '1A');
+    const students = window.getFilteredStudents();
+    const classes = [...new Set(students.map(s => s.class))].sort();
+    const currentClass = window.acadClassFilter && window.acadClassFilter !== 'Semua' 
+        ? window.acadClassFilter 
+        : (classes[0] || '1A');
 
-            let filteredStudents = students.filter(s => s.class === currentClass);
+    let filteredStudents = students.filter(s => s.class === currentClass);
+    filteredStudents = sortSiswaByName(filteredStudents);
 
-            // === SISIPAN KODE SISWA A-Z INPUT KOLEKTIF ===
-            filteredStudents = sortSiswaByName(filteredStudents);
+    const classOptionsHtml = classes.map(c => `
+        <option value="${c}" ${c === currentClass ? 'selected' : ''}>Kelas ${c}</option>
+    `).join('');
 
-            const classOptionsHtml = classes.map(c => `
-                <option value="${c}" ${c === currentClass ? 'selected' : ''}>Kelas ${c}</option>
-            `).join('');
+    const typeOptionsHtml = ACADEMIC_TYPES.map(t => `<option value="${t}">${t}</option>`).join('');
 
-            const typeOptionsHtml = ACADEMIC_TYPES.map(t => `<option value="${t}">${t}</option>`).join('');
+    // --- LOGIKA FORM MAPEL OTOMATIS SESUAI GURU LOGIN ---
+    const isGuru = window.currentUser && window.currentUser.role === ROLES.GURU;
+    const teacherSubjects = (isGuru && window.currentUser.subjects && window.currentUser.subjects.length > 0)
+        ? window.currentUser.subjects 
+        : [];
 
-            let studentRowsHtml = filteredStudents.map((s, idx) => `
-                <tr class="border-b border-slate-100 text-xs sm:text-sm hover:bg-slate-50">
-                    <td class="p-3 text-center font-bold text-slate-400">${idx + 1}</td>
-                    <td class="p-3 font-extrabold text-slate-800">${s.name} <span class="block text-[10px] text-slate-400 font-medium">NISN: ${s.nisn}</span></td>
-                    <td class="p-3 text-center font-bold text-indigo-600">${s.class}</td>
-                    <td class="p-3">
-                        <input type="number" name="score_${s.nisn}" data-nisn="${s.nisn}" data-name="${s.name}" min="0" max="100" placeholder="0 - 100" class="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 font-extrabold text-sm text-center outline-none focus:border-indigo-600 focus:bg-white">
-                    </td>
-                </tr>
-            `).join('');
+    let subjectInputHtml = '';
+    if (teacherSubjects.length > 0) {
+        // Jika Guru login dan memiliki daftar Mapel Pengampuan
+        const subjectOptions = teacherSubjects.map(s => `<option value="${s}">${s}</option>`).join('');
+        subjectInputHtml = `
+            <select id="batch-acad-subject" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm" required>
+                ${subjectOptions}
+            </select>
+        `;
+    } else {
+        // Jika Admin atau Guru belum diatur daftar mapelnya (Fallback Text Input)
+        subjectInputHtml = `
+            <input type="text" id="batch-acad-subject" placeholder="Contoh: Matematika" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm" required>
+        `;
+    }
+    // ---------------------------------------------------
 
-            if (!filteredStudents.length) {
-                studentRowsHtml = `<tr><td colspan="4" class="p-6 text-center text-slate-400 font-semibold">Tidak ada siswa ditemukan di kelas ini.</td></tr>`;
-            }
+    let studentRowsHtml = filteredStudents.map((s, idx) => `
+        <tr class="border-b border-slate-100 text-xs sm:text-sm hover:bg-slate-50">
+            <td class="p-3 text-center font-bold text-slate-400">${idx + 1}</td>
+            <td class="p-3 font-extrabold text-slate-800">${s.name} <span class="block text-[10px] text-slate-400 font-medium">NISN: ${s.nisn}</span></td>
+            <td class="p-3 text-center font-bold text-indigo-600">${s.class}</td>
+            <td class="p-3">
+                <input type="number" name="score_${s.nisn}" data-nisn="${s.nisn}" data-name="${s.name}" min="0" max="100" placeholder="0 - 100" class="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 font-extrabold text-sm text-center outline-none focus:border-indigo-600 focus:bg-white">
+            </td>
+        </tr>
+    `).join('');
 
-            window.openModal(`
-                <div class="p-6 sm:p-8">
-                    <h3 class="text-xl font-extrabold text-slate-800 mb-2 flex items-center gap-2">
-                        <i class="fas fa-layer-group text-indigo-600"></i> Input Nilai Akademik Kolektif / Batch
-                    </h3>
-                    <p class="text-xs text-slate-500 mb-6 font-medium">Masukkan nilai beberapa siswa sekaligus untuk kelas, mata pelajaran, dan materi tertentu.</p>
+    if (!filteredStudents.length) {
+        studentRowsHtml = `<tr><td colspan="4" class="p-6 text-center text-slate-400 font-semibold">Tidak ada siswa ditemukan di kelas ini.</td></tr>`;
+    }
 
-                    <form onsubmit="window.processBatchAcademic(event)" class="space-y-4">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-4">
-                            <div>
-                                <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Kelas</label>
-                                <select id="batch-acad-class" onchange="window.openBatchAcademicModalWithClass(this.value)" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm">
-                                    ${classOptionsHtml}
-                                </select>
-                            </div>
-                            <div>
-                                <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Mata Pelajaran</label>
-                                <input type="text" id="batch-acad-subject" placeholder="Contoh: Matematika" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm" required>
-                            </div>
-                            <div>
-                                <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Jenis Penilaian</label>
-                                <select id="batch-acad-type" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm">
-                                    ${typeOptionsHtml}
-                                </select>
-                            </div>
-                            <div>
-                                <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Materi / Bahasan</label>
-                                <input type="text" id="batch-acad-materi" placeholder="Contoh: Pecahan Senilai" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm">
-                            </div>
-                        </div>
+    window.openModal(`
+        <div class="p-6 sm:p-8">
+            <h3 class="text-xl font-extrabold text-slate-800 mb-2 flex items-center gap-2">
+                <i class="fas fa-layer-group text-indigo-600"></i> Input Nilai Akademik Kolektif / Batch
+            </h3>
+            <p class="text-xs text-slate-500 mb-6 font-medium">Masukkan nilai beberapa siswa sekaligus untuk kelas, mata pelajaran, dan materi tertentu.</p>
 
-                        <div class="max-h-[45vh] overflow-y-auto border border-slate-200 rounded-2xl">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="bg-slate-100 text-slate-600 uppercase text-[10px] font-black border-b border-slate-200 sticky top-0 bg-slate-100 z-10">
-                                        <th class="p-3 text-center w-10">No</th>
-                                        <th class="p-3">Nama Siswa</th>
-                                        <th class="p-3 text-center w-20">Kelas</th>
-                                        <th class="p-3 text-center w-32">Nilai (0-100)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>${studentRowsHtml}</tbody>
-                            </table>
-                        </div>
-
-                        <div class="pt-4 flex justify-end gap-3 border-t border-slate-100">
-                            <button type="button" onclick="window.closeModal()" class="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs sm:text-sm">Batal</button>
-                            <button type="submit" id="btn-submit-batch-acad" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md flex items-center gap-2">
-                                <i class="fas fa-save"></i> Simpan Semua Nilai
-                            </button>
-                        </div>
-                    </form>
+            <form onsubmit="window.processBatchAcademic(event)" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-4">
+                    <div>
+                        <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Kelas</label>
+                        <select id="batch-acad-class" onchange="window.openBatchAcademicModalWithClass(this.value)" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm">
+                            ${classOptionsHtml}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Mata Pelajaran</label>
+                        ${subjectInputHtml}
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Jenis Penilaian</label>
+                        <select id="batch-acad-type" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm">
+                            ${typeOptionsHtml}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Materi / Bahasan</label>
+                        <input type="text" id="batch-acad-materi" placeholder="Contoh: Pecahan Senilai" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm">
+                    </div>
                 </div>
-            `, 'max-w-4xl');
-        };
+
+                <div class="max-h-[45vh] overflow-y-auto border border-slate-200 rounded-2xl">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 uppercase text-[10px] font-black border-b border-slate-200 sticky top-0 bg-slate-100 z-10">
+                                <th class="p-3 text-center w-10">No</th>
+                                <th class="p-3">Nama Siswa</th>
+                                <th class="p-3 text-center w-20">Kelas</th>
+                                <th class="p-3 text-center w-32">Nilai (0-100)</th>
+                            </tr>
+                        </thead>
+                        <tbody>${studentRowsHtml}</tbody>
+                    </table>
+                </div>
+
+                <div class="pt-4 flex justify-end gap-3 border-t border-slate-100">
+                    <button type="button" onclick="window.closeModal()" class="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs sm:text-sm">Batal</button>
+                    <button type="submit" id="btn-submit-batch-acad" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md flex items-center gap-2">
+                        <i class="fas fa-save"></i> Simpan Semua Nilai
+                    </button>
+                </div>
+            </form>
+        </div>
+    `, 'max-w-4xl');
+};
 
         window.openBatchAcademicModalWithClass = function(selectedClass) {
             window.acadClassFilter = selectedClass;
@@ -1249,14 +1269,22 @@
             }
 
             document.querySelectorAll('#nav-menu a').forEach(el => {
-                el.classList.remove('bg-white', 'text-indigo-700', 'shadow-sm', 'border-slate-100');
-                if(el.querySelector('i')) el.querySelector('i').classList.remove('text-indigo-600');
+                el.classList.remove('bg-white', 'text-purple-950', 'shadow-lg', 'font-black');
+                el.classList.add('text-purple-200');
+                if(el.querySelector('i')) {
+                    el.querySelector('i').classList.remove('text-purple-950');
+                    el.querySelector('i').classList.add('text-purple-300');
+                }
             });
 
             const activeNav = document.getElementById(`nav-${pageId}`);
             if (activeNav) {
-                activeNav.classList.add('bg-white', 'text-indigo-700', 'shadow-sm', 'border-slate-100');
-                if(activeNav.querySelector('i')) activeNav.querySelector('i').classList.add('text-indigo-600');
+                activeNav.classList.remove('text-purple-200');
+                activeNav.classList.add('bg-white', 'text-purple-950', 'shadow-lg', 'font-black');
+                if(activeNav.querySelector('i')) {
+                    activeNav.querySelector('i').classList.remove('text-purple-300');
+                    activeNav.querySelector('i').classList.add('text-purple-950');
+                }
             }
 
             document.getElementById('page-title').textContent = document.querySelector(`#nav-${pageId} span`)?.textContent || 'Portal';
@@ -2667,6 +2695,298 @@
             }
         };
 
+        // =========================================================
+        // KODE BARU: STATE INDEX SLIDER DASHBOARD & FILTER BK
+        // =========================================================
+        window.dashState = {
+            disiplinIdx: 0,
+            akademikIdx: 0,
+            bkMonthFilter: getLocalDateString().slice(0, 7) // Default YYYY-MM bulan berjalan
+        };
+
+        // =========================================================
+        // FITUR UNDUH EXCEL SISWA PERLU PERHATIAN
+        // =========================================================
+        window.downloadSiswaDisiplinExcel = function() {
+            const data = window.getSiswaDisiplinAttentionList();
+            if (!data.length) {
+                window.showToast("Tidak ada data siswa kedisiplinan untuk diunduh", "info");
+                return;
+            }
+            const cleanData = data.map((item, idx) => ({
+                No: idx + 1,
+                NISN: item.nisn,
+                "Nama Siswa": item.name,
+                Kelas: item.class,
+                "Total Poin Pelanggaran": item.totalPoints,
+                "Detail Pelanggaran": item.details.map(d => `${d.date}: ${d.description} (+${d.point} pt)`).join('; ')
+            }));
+            const ws = XLSX.utils.json_to_sheet(cleanData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Kedisiplinan >= 25 Poin");
+            XLSX.writeFile(wb, `Laporan_Perhatian_Kedisiplinan_${new Date().toISOString().split('T')[0]}.xlsx`);
+            window.showToast("Berhasil mengunduh laporan kedisiplinan!", "success");
+        };
+
+        window.downloadSiswaAkademikExcel = function() {
+            const data = window.getSiswaAkademikAttentionList();
+            if (!data.length) {
+                window.showToast("Tidak ada data siswa akademik untuk diunduh", "info");
+                return;
+            }
+            const cleanData = data.map((item, idx) => ({
+                No: idx + 1,
+                NISN: item.nisn,
+                "Nama Siswa": item.name,
+                Kelas: item.class,
+                "Rata-Rata Nilai": item.avgScore,
+                "Jumlah Evaluasi": item.totalEvaluations,
+                "Rincian Nilai Mapel": item.details.map(d => `${d.subject} (${d.type}): ${d.score}`).join('; ')
+            }));
+            const ws = XLSX.utils.json_to_sheet(cleanData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Akademik <= 78");
+            XLSX.writeFile(wb, `Laporan_Perhatian_Akademik_${new Date().toISOString().split('T')[0]}.xlsx`);
+            window.showToast("Berhasil mengunduh laporan akademik!", "success");
+        };
+
+        // =========================================================
+        // HELPER PENGAMBILAN DATA SISWA PERLU PERHATIAN
+        // =========================================================
+        window.getSiswaDisiplinAttentionList = function() {
+        const catatans = window.appState.catatans || [];
+        const userRole = String(window.currentUser?.role || '').toLowerCase();
+        const isSiswa = userRole === ROLES.SISWA;
+        
+        // Jika Siswa login, filter hanya data dirinya sendiri
+        let students = window.getFilteredStudents();
+        if (isSiswa && window.currentUser?.data) {
+            students = students.filter(s => s.nisn === window.currentUser.data.nisn);
+        }
+
+        const result = [];
+
+        students.forEach(s => {
+            const sCatatan = catatans.filter(c => c.nisn === s.nisn && c.category === 'pelanggaran');
+            const totalPoints = sCatatan.reduce((sum, c) => sum + (parseInt(c.point) || 0), 0);
+            if (totalPoints >= 25) {
+                result.push({
+                    ...s,
+                    totalPoints: totalPoints,
+                    details: sCatatan
+                });
+            }
+        });
+
+        return result.sort((a, b) => b.totalPoints - a.totalPoints);
+        };
+
+        window.getSiswaAkademikAttentionList = function() {
+        const academics = window.appState.academics || [];
+        const userRole = String(window.currentUser?.role || '').toLowerCase();
+        const isSiswa = userRole === ROLES.SISWA;
+        const isGuru = userRole === ROLES.GURU;
+
+        // Ambil Daftar Siswa Sesuai Hak Akses
+        let students = window.getFilteredStudents();
+        if (isSiswa && window.currentUser?.data) {
+            students = students.filter(s => s.nisn === window.currentUser.data.nisn);
+        }
+
+        // Ambil Mapel Ampuan jika Guru Login
+        const teacherSubjects = (isGuru && window.currentUser.subjects && window.currentUser.subjects.length > 0)
+            ? window.currentUser.subjects
+            : [];
+
+        const result = [];
+
+        students.forEach(s => {
+            // Filter semua nilai milik siswa ini
+            let sAcads = academics.filter(a => a.nisn === s.nisn);
+
+            // Jika Guru yang login, saring hanya nilai pada Mapel yang diampu
+            if (isGuru && teacherSubjects.length > 0) {
+                sAcads = sAcads.filter(a => teacherSubjects.includes(a.subject));
+            }
+
+            if (sAcads.length > 0) {
+                // Grouping nilai per Mata Pelajaran
+                const subjectGroup = {};
+                sAcads.forEach(a => {
+                    const subj = a.subject || 'Lainnya';
+                    if (!subjectGroup[subj]) subjectGroup[subj] = [];
+                    subjectGroup[subj].push(parseFloat(a.score) || 0);
+                });
+
+                // Cari mapel yang rata-ratanya <= 78
+                const lowSubjects = [];
+                Object.keys(subjectGroup).forEach(subj => {
+                    const scores = subjectGroup[subj];
+                    const avgSubj = parseFloat((scores.reduce((sum, val) => sum + val, 0) / scores.length).toFixed(1));
+                    
+                    if (avgSubj <= 78) {
+                        lowSubjects.push({
+                            subject: subj,
+                            avgScore: avgSubj,
+                            totalEvaluations: scores.length
+                        });
+                    }
+                });
+
+                // Jika siswa memiliki minimal 1 mapel dengan rata-rata <= 78
+                if (lowSubjects.length > 0) {
+                    // Rata-rata keseluruhan dari mapel-mapel yang bermasalah saja
+                    const totalAvgLow = lowSubjects.reduce((sum, item) => sum + item.avgScore, 0);
+                    const overallLowAvg = parseFloat((totalAvgLow / lowSubjects.length).toFixed(1));
+
+                    result.push({
+                        ...s,
+                        avgScore: overallLowAvg, // Menampilkan rata-rata mapel bermasalah
+                        totalEvaluations: sAcads.length,
+                        details: lowSubjects // Hanya berisi mapel yang <= 78
+                    });
+                }
+            }
+        });
+
+        return result.sort((a, b) => a.avgScore - b.avgScore);
+        };
+
+        // Modal Detail Semua Siswa Kedisiplinan
+        window.openDetailDisiplinModal = function() {
+            const list = window.getSiswaDisiplinAttentionList();
+            let rowsHtml = list.map((item, idx) => `
+                <tr class="border-b border-slate-100 text-xs sm:text-sm hover:bg-slate-50">
+                    <td class="p-3 text-center font-bold text-slate-400">${idx + 1}</td>
+                    <td class="p-3">
+                        <div class="flex items-center gap-3">
+                            <img src="${item.photo || `https://placehold.co/100x100/4f46e5/ffffff?text=${(item.name || 'S').charAt(0)}`}" class="w-9 h-9 rounded-full object-cover border border-slate-200">
+                            <div>
+                                <p class="font-bold text-slate-800">${item.name}</p>
+                                <p class="text-[10px] text-slate-400">NISN: ${item.nisn}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-3 font-bold text-indigo-600 text-center">Kelas ${item.class}</td>
+                    <td class="p-3 font-black text-rose-600 text-center text-base">${item.totalPoints} Pts</td>
+                    <td class="p-3 text-slate-600 text-xs">
+                        <ul class="list-disc list-inside space-y-0.5">
+                            ${item.details.map(d => `<li><strong>${d.description}</strong> (${d.date}) - <span class="text-rose-600 font-bold">+${d.point} Pts</span></li>`).join('')}
+                        </ul>
+                    </td>
+                </tr>
+            `).join('');
+
+            if (!list.length) rowsHtml = `<tr><td colspan="5" class="p-6 text-center text-slate-400 font-semibold">Tidak ada siswa dengan poin kedisiplinan >= 25.</td></tr>`;
+
+            window.openModal(`
+                <div class="p-6 sm:p-8">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                        <div>
+                            <h3 class="text-xl font-extrabold text-slate-800 flex items-center gap-2">
+                                <i class="fas fa-exclamation-triangle text-rose-600"></i> Detail Siswa Kedisiplinan (Poin >= 25)
+                            </h3>
+                            <p class="text-xs text-slate-500 font-medium">Daftar lengkap siswa yang memerlukan perhatian & pembinaan khusus.</p>
+                        </div>
+                        <button onclick="window.downloadSiswaDisiplinExcel()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm">
+                            <i class="fas fa-file-excel"></i> Unduh Data Excel
+                        </button>
+                    </div>
+                    <div class="max-h-[60vh] overflow-y-auto border border-slate-200 rounded-2xl custom-scrollbar">
+                        <table class="w-full text-left border-collapse min-w-[650px]">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 uppercase text-[10px] font-extrabold border-b border-slate-200">
+                                    <th class="p-3 text-center w-10">No</th>
+                                    <th class="p-3">Nama Siswa</th>
+                                    <th class="p-3 text-center">Kelas</th>
+                                    <th class="p-3 text-center">Total Poin</th>
+                                    <th class="p-3">Rincian Pelanggaran</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `, 'max-w-4xl');
+        };
+
+        // Modal Detail Semua Siswa Akademik
+        window.openDetailAkademikModal = function() {
+        const list = window.getSiswaAkademikAttentionList();
+        let rowsHtml = list.map((item, idx) => `
+            <tr class="border-b border-slate-100 text-xs sm:text-sm hover:bg-slate-50">
+                <td class="p-3 text-center font-bold text-slate-400">${idx + 1}</td>
+                <td class="p-3">
+                    <div class="flex items-center gap-3">
+                        <img src="${item.photo || `https://placehold.co/100x100/4f46e5/ffffff?text=${(item.name || 'S').charAt(0)}`}" class="w-9 h-9 rounded-full object-cover border border-slate-200">
+                        <div>
+                            <p class="font-bold text-slate-800">${item.name}</p>
+                            <p class="text-[10px] text-slate-400">NISN: ${item.nisn}</p>
+                        </div>
+                    </div>
+                </td>
+                <td class="p-3 font-bold text-indigo-600 text-center">Kelas ${item.class}</td>
+                <td class="p-3 font-black text-amber-600 text-center text-base">${item.avgScore}</td>
+                <td class="p-3 text-slate-600 text-xs">
+                    <div class="flex flex-wrap gap-1">
+                        ${item.details.map(d => `<span class="bg-amber-50 border border-amber-200 px-2 py-0.5 rounded text-[10px] font-bold text-amber-800">${d.subject}: <strong>${d.avgScore}</strong></span>`).join('')}
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+
+        if (!list.length) rowsHtml = `<tr><td colspan="5" class="p-6 text-center text-slate-400 font-semibold">Tidak ada siswa dengan rata-rata mapel <= 78.</td></tr>`;
+
+        window.openModal(`
+            <div class="p-6 sm:p-8">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                        <h3 class="text-xl font-extrabold text-slate-800 flex items-center gap-2">
+                            <i class="fas fa-book-reader text-amber-600"></i> Detail Siswa Perhatian Akademik (Nilai Mapel <= 78)
+                        </h3>
+                        <p class="text-xs text-slate-500 font-medium">Daftar siswa dan mata pelajaran yang membutuhkan bimbingan khusus.</p>
+                    </div>
+                    <button onclick="window.downloadSiswaAkademikExcel()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-sm">
+                        <i class="fas fa-file-excel"></i> Unduh Data Excel
+                    </button>
+                </div>
+                <div class="max-h-[60vh] overflow-y-auto border border-slate-200 rounded-2xl custom-scrollbar">
+                    <table class="w-full text-left border-collapse min-w-[650px]">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 uppercase text-[10px] font-extrabold border-b border-slate-200">
+                                <th class="p-3 text-center w-10">No</th>
+                                <th class="p-3">Nama Siswa</th>
+                                <th class="p-3 text-center">Kelas</th>
+                                <th class="p-3 text-center">Rata-Rata Bermasalah</th>
+                                <th class="p-3">Mapel Perlu Bimbingan (<= 78)</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                </div>
+            </div>
+        `, 'max-w-4xl');
+        };
+
+        // Navigation Next/Prev Slider Kedisiplinan
+        window.nextDisiplinSiswa = function(step) {
+            const list = window.getSiswaDisiplinAttentionList();
+            if (!list.length) return;
+            window.dashState.disiplinIdx = (window.dashState.disiplinIdx + step + list.length) % list.length;
+            window.renderDashboard();
+        };
+
+        // Navigation Next/Prev Slider Akademik
+        window.nextAkademikSiswa = function(step) {
+            const list = window.getSiswaAkademikAttentionList();
+            if (!list.length) return;
+            window.dashState.akademikIdx = (window.dashState.akademikIdx + step + list.length) % list.length;
+            window.renderDashboard();
+        };
+
+        // =========================================================
+        // DASHBOARD UTAMA DENGAN TAMBAHAN WIDGET KEDISIPLINAN, AKADEMIK & GRAFIK BK
+        // =========================================================
         window.renderDashboard = () => {
             const content = document.getElementById('main-content');
             const today = new Date().toISOString().split('T')[0];
@@ -2678,7 +2998,7 @@
             let todayAtt = att.filter(a => a.date === today);
             if(isSiswa) todayAtt = todayAtt.filter(a => a.nisn === window.currentUser.id);
 
-            // --- 1. AMBIL DATA PENGUMUMAN TERBARU (Maksimal 3) ---
+            // Pengumuman & Jadwal
             const latestAnnouncements = (window.appState.announcements || []).slice().reverse().slice(0, 3);
             let announcementsHtml = latestAnnouncements.map(a => `
                 <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col gap-1.5 hover:bg-indigo-50/50 transition-colors">
@@ -2693,22 +3013,15 @@
                     <p class="text-slate-600 text-xs line-clamp-2 pl-4">${a.content}</p>
                 </div>
             `).join('');
+            if (!announcementsHtml) announcementsHtml = `<p class="text-slate-400 text-xs text-center py-6 italic font-medium">Belum ada pengumuman terbaru saat ini.</p>`;
 
-            if (!announcementsHtml) {
-                announcementsHtml = `<p class="text-slate-400 text-xs text-center py-6 italic font-medium">Belum ada pengumuman terbaru saat ini.</p>`;
-            }
-
-            // --- 2. AMBIL DATA JADWAL PELAJARAN KHUSUS HARI INI ---
             const daysIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
             const todayDayName = daysIndo[new Date().getDay()];
-            
             const allSchedules = window.appState.schedules || [];
             let todaySchedules = allSchedules.filter(s => s.day === todayDayName);
-            
             if (isSiswa && window.currentUser.data && window.currentUser.data.class) {
                 todaySchedules = todaySchedules.filter(s => s.class === window.currentUser.data.class);
             }
-
             todaySchedules.sort((a, b) => a.time.localeCompare(b.time));
 
             let todaySchedulesHtml = todaySchedules.map(s => `
@@ -2727,12 +3040,9 @@
                     </span>
                 </div>
             `).join('');
+            if (!todaySchedulesHtml) todaySchedulesHtml = `<p class="text-slate-400 text-xs text-center py-6 italic font-medium">Tidak ada jadwal pelajaran untuk hari ini (${todayDayName}).</p>`;
 
-            if (!todaySchedulesHtml) {
-                todaySchedulesHtml = `<p class="text-slate-400 text-xs text-center py-6 italic font-medium">Tidak ada jadwal pelajaran untuk hari ini (${todayDayName}).</p>`;
-            }
-
-            // --- 3. PROFIL SISWA ATAU GURU SAAT LOGIN ---
+            // Profil User Login
             let userProfileHtml = '';
             if (isSiswa) {
                 const s = window.currentUser.data || { name: window.currentUser.name, nisn: window.currentUser.id, class: '-' };
@@ -2765,7 +3075,166 @@
                 `;
             }
 
-            // --- 4. RENDER SEMUA ELEMEN DASHBOARD ---
+            // ---------------------------------------------------------
+            // RENDERING WIDGET 1: SISWA KEDISIPLINAN & CATATAN (POIN >= 25)
+            // ---------------------------------------------------------
+            const disiplinList = window.getSiswaDisiplinAttentionList();
+            let disiplinWidgetHtml = '';
+
+            if (disiplinList.length > 0) {
+                if (window.dashState.disiplinIdx >= disiplinList.length) window.dashState.disiplinIdx = 0;
+                const item = disiplinList[window.dashState.disiplinIdx];
+                const photoUrl = item.photo || `https://placehold.co/120x120/ef4444/ffffff?text=${(item.name || 'S').charAt(0)}`;
+
+                disiplinWidgetHtml = `
+                    <div class="bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-rose-100 relative overflow-hidden flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-4 border-b border-rose-50 pb-3">
+                                <h3 class="text-xs sm:text-sm font-extrabold text-rose-600 uppercase tracking-wide flex items-center gap-2">
+                                    <i class="fas fa-exclamation-triangle text-rose-500 animate-bounce"></i> Siswa Perlu Perhatian (Kedisiplinan)
+                                </h3>
+                                <span class="bg-rose-100 text-rose-700 text-[10px] font-black px-2.5 py-1 rounded-full">
+                                    ${window.dashState.disiplinIdx + 1} dari ${disiplinList.length} Siswa
+                                </span>
+                            </div>
+
+                            <div class="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                                <img src="${photoUrl}" class="w-20 h-20 rounded-2xl object-cover border-2 border-rose-200 shadow-md flex-shrink-0">
+                                <div class="flex-1 text-center sm:text-left">
+                                    <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
+                                        <h4 class="font-extrabold text-slate-800 text-base">${item.name}</h4>
+                                        <span class="bg-indigo-50 text-indigo-700 font-extrabold text-[10px] px-2 py-0.5 rounded-md border border-indigo-100">Kelas ${item.class}</span>
+                                    </div>
+                                    <p class="text-xs text-slate-400 font-semibold mb-2">NISN: ${item.nisn}</p>
+
+                                    <div class="bg-rose-50/80 p-3 rounded-2xl border border-rose-100 mb-3">
+                                        <div class="flex justify-between items-center mb-1">
+                                            <span class="text-[11px] font-bold text-rose-800">Total Poin Pelanggaran:</span>
+                                            <span class="text-sm font-black text-rose-600">${item.totalPoints} Pts</span>
+                                        </div>
+                                        <p class="text-[11px] text-slate-600 italic line-clamp-2">
+                                            "<strong>${item.details[0]?.description || 'Pelanggaran Tata Tertib'}</strong>" (${item.details[0]?.date || '-'})
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-3 border-t border-slate-100 mt-2">
+                            <div class="flex gap-2">
+                                <button onclick="window.nextDisiplinSiswa(-1)" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-600 font-bold flex items-center justify-center transition-all text-xs" title="Sebelumnya"><i class="fas fa-chevron-left"></i></button>
+                                <button onclick="window.nextDisiplinSiswa(1)" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-600 font-bold flex items-center justify-center transition-all text-xs" title="Selanjutnya"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="window.downloadSiswaDisiplinExcel()" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-xl text-xs font-bold border border-emerald-200 transition-all flex items-center gap-1.5" title="Unduh Excel">
+                                    <i class="fas fa-file-excel"></i> Unduh
+                                </button>
+                                <button onclick="window.openDetailDisiplinModal()" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-1.5">
+                                    <i class="fas fa-list"></i> Lihat Detail
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                disiplinWidgetHtml = `
+                    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 text-center flex flex-col items-center justify-center">
+                        <div class="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center mb-3 text-xl">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <h4 class="font-bold text-slate-800 text-sm mb-1">Kedisiplinan Terjaga</h4>
+                        <p class="text-xs text-slate-400 max-w-xs">Tidak ada siswa yang mencapai poin pelanggaran >= 25 saat ini.</p>
+                    </div>
+                `;
+            }
+
+            // ---------------------------------------------------------
+            // RENDERING WIDGET 2: SISWA AKADEMIK (RATA-RATA <= 78)
+            // ---------------------------------------------------------
+            const akademikList = window.getSiswaAkademikAttentionList();
+            let akademikWidgetHtml = '';
+
+            if (akademikList.length > 0) {
+                if (window.dashState.akademikIdx >= akademikList.length) window.dashState.akademikIdx = 0;
+                const item = akademikList[window.dashState.akademikIdx];
+                const photoUrl = item.photo || `https://placehold.co/120x120/f59e0b/ffffff?text=${(item.name || 'S').charAt(0)}`;
+
+                akademikWidgetHtml = `
+                    <div class="bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-amber-100 relative overflow-hidden flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-4 border-b border-amber-50 pb-3">
+                                <h3 class="text-xs sm:text-sm font-extrabold text-amber-600 uppercase tracking-wide flex items-center gap-2">
+                                    <i class="fas fa-book-reader text-amber-500"></i> Siswa Perlu Bimbingan Akademik
+                                </h3>
+                                <span class="bg-amber-100 text-amber-700 text-[10px] font-black px-2.5 py-1 rounded-full">
+                                    ${window.dashState.akademikIdx + 1} dari ${akademikList.length} Siswa
+                                </span>
+                            </div>
+
+                            <div class="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                                <img src="${photoUrl}" class="w-20 h-20 rounded-2xl object-cover border-2 border-amber-200 shadow-md flex-shrink-0">
+                                <div class="flex-1 text-center sm:text-left">
+                                    <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
+                                        <h4 class="font-extrabold text-slate-800 text-base">${item.name}</h4>
+                                        <span class="bg-indigo-50 text-indigo-700 font-extrabold text-[10px] px-2 py-0.5 rounded-md border border-indigo-100">Kelas ${item.class}</span>
+                                    </div>
+                                    <p class="text-xs text-slate-400 font-semibold mb-2">NISN: ${item.nisn}</p>
+
+                                    <div class="bg-amber-50/80 p-3 rounded-2xl border border-amber-100 mb-3">
+                                        <div class="flex justify-between items-center mb-1">
+                                            <span class="text-[11px] font-bold text-amber-800">Rata-Rata Nilai Akademik:</span>
+                                            <span class="text-sm font-black text-amber-600">${item.avgScore}</span>
+                                        </div>
+                                        <div class="flex flex-wrap gap-1 mt-1">
+                                            ${item.details.slice(0, 3).map(d => `<span class="bg-white border border-amber-200 px-2 py-0.5 rounded text-[10px] font-bold text-slate-700">${d.subject}: <strong>${d.avgScore}</strong></span>`).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-3 border-t border-slate-100 mt-2">
+                            <div class="flex gap-2">
+                                <button onclick="window.nextAkademikSiswa(-1)" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-600 font-bold flex items-center justify-center transition-all text-xs" title="Sebelumnya"><i class="fas fa-chevron-left"></i></button>
+                                <button onclick="window.nextAkademikSiswa(1)" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-600 font-bold flex items-center justify-center transition-all text-xs" title="Selanjutnya"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="window.downloadSiswaAkademikExcel()" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-xl text-xs font-bold border border-emerald-200 transition-all flex items-center gap-1.5" title="Unduh Excel">
+                                    <i class="fas fa-file-excel"></i> Unduh
+                                </button>
+                                <button onclick="window.openDetailAkademikModal()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-1.5">
+                                    <i class="fas fa-list"></i> Lihat Detail
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                akademikWidgetHtml = `
+                    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 text-center flex flex-col items-center justify-center">
+                        <div class="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-2xl flex items-center justify-center mb-3 text-xl">
+                            <i class="fas fa-graduation-cap"></i>
+                        </div>
+                        <h4 class="font-bold text-slate-800 text-sm mb-1">Capaian Akademik Baik</h4>
+                        <p class="text-xs text-slate-400 max-w-xs">Tidak ada siswa dengan rata-rata nilai <= 78 saat ini.</p>
+                    </div>
+                `;
+            }
+
+            // Opsi Pilihan Bulan untuk Filter Grafik Layanan BK
+            const months = [
+                { val: '2026-07', label: 'Juli 2026' },
+                { val: '2026-08', label: 'Agustus 2026' },
+                { val: '2026-09', label: 'September 2026' },
+                { val: '2026-10', label: 'Oktober 2026' },
+                { val: '2026-11', label: 'November 2026' },
+                { val: '2026-12', label: 'Desember 2026' }
+            ];
+            const bkMonthOptionsHtml = months.map(m => `
+                <option value="${m.val}" ${m.val === window.dashState.bkMonthFilter ? 'selected' : ''}>${m.label}</option>
+            `).join('');
+
+            // RENDER SELURUH HALAMAN DASHBOARD
             content.innerHTML = `
                 ${userProfileHtml}
                 
@@ -2787,6 +3256,12 @@
                         <div><p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1.5">Terlambat</p><p class="text-3xl sm:text-4xl font-black text-amber-500">${todayAtt.filter(a=>a.status==='T').length}</p></div>
                         <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl sm:text-2xl group-hover:scale-110 transition-transform"><i class="fas fa-clock"></i></div>
                     </div>
+                </div>
+
+                <!-- WIDGET TAMBAHAN FITUR 1 & 2: SISWA PERLU PERHATIAN (DISIPLIN & AKADEMIK) -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 slide-up">
+                    ${disiplinWidgetHtml}
+                    ${akademikWidgetHtml}
                 </div>
 
                 <!-- WIDGET PENGUMUMAN & JADWAL HARI INI -->
@@ -2824,35 +3299,58 @@
                     </div>
                 </div>
 
-                <!-- GRAFIK STATISTIK -->
+                <!-- WIDGET FITUR 3: GRAFIK LAYANAN BK & FILTER BULAN + GRAFIK STATISTIK LAIN -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 slide-up" style="animation-delay: 0.1s;">
+                    <!-- GRAFIK LAYANAN BK WITH FILTER -->
+                    <div class="bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-slate-100">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 sm:mb-6">
+                            <h3 class="text-xs sm:text-sm font-extrabold text-slate-800 uppercase tracking-wide flex items-center gap-2">
+                                <i class="fas fa-user-shield text-purple-500"></i> Grafik Layanan BK (Bimbingan Konseling)
+                            </h3>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[11px] font-bold text-slate-400">Bulan:</span>
+                                <select onchange="window.dashState.bkMonthFilter = this.value; window.initDashboardCharts();" class="p-1.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
+                                    ${bkMonthOptionsHtml}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="relative h-56 sm:h-64 w-full"><canvas id="chart-bk"></canvas></div>
+                    </div>
+
+                    <!-- KEHADIRAN (7 HARI TERAKHIR) -->
                     <div class="bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-slate-100">
                         <h3 class="text-xs sm:text-sm font-extrabold text-slate-800 mb-4 sm:mb-6 flex items-center gap-2 uppercase tracking-wide"><i class="fas fa-chart-area text-indigo-500"></i> Kehadiran (7 Hari Terakhir)</h3>
                         <div class="relative h-56 sm:h-64 w-full"><canvas id="chart-attendance"></canvas></div>
                     </div>
+                </div>
+                
+                <!-- BARIS 1 GRAFIK: REKAP AKADEMIK & CATATAN KEDISIPLINAN (2 KOLOM) -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 slide-up" style="animation-delay: 0.2s;">
                     <div class="bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-slate-100">
                         <h3 class="text-xs sm:text-sm font-extrabold text-slate-800 mb-4 sm:mb-6 flex items-center gap-2 uppercase tracking-wide"><i class="fas fa-book-open text-blue-500"></i> Rekap Akademik (Rata-Rata)</h3>
                         <div class="relative h-56 sm:h-64 w-full"><canvas id="chart-academic"></canvas></div>
                     </div>
-                </div>
-                
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 slide-up" style="animation-delay: 0.2s;">
                     <div class="bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-slate-100">
                         <h3 class="text-xs sm:text-sm font-extrabold text-slate-800 mb-4 sm:mb-6 flex items-center gap-2 uppercase tracking-wide"><i class="fas fa-clipboard-list text-rose-500"></i> Catatan Kedisiplinan</h3>
                         <div class="relative h-56 sm:h-64 w-full flex justify-center"><canvas id="chart-catatan"></canvas></div>
                     </div>
-                    <div class="bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-slate-100">
-                        <h3 class="text-xs sm:text-sm font-extrabold text-slate-800 mb-4 sm:mb-6 flex items-center gap-2 uppercase tracking-wide"><i class="fas fa-money-bill-wave text-emerald-500"></i> Keuangan & SPP</h3>
-                        <div class="relative h-56 sm:h-64 w-full"><canvas id="chart-payment"></canvas></div>
-                    </div>
+                </div>
+
+                <!-- BARIS 2 GRAFIK: KEUANGAN & SPP (BERDIRI SENDIRI DI BAWAH) -->
+                <div class="bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-slate-100 slide-up" style="animation-delay: 0.25s;">
+                    <h3 class="text-xs sm:text-sm font-extrabold text-slate-800 mb-4 sm:mb-6 flex items-center gap-2 uppercase tracking-wide"><i class="fas fa-money-bill-wave text-emerald-500"></i> Keuangan & SPP</h3>
+                    <div class="relative h-56 sm:h-64 w-full"><canvas id="chart-payment"></canvas></div>
                 </div>
             `;
             setTimeout(initDashboardCharts, 100);
         };
 
-        const initDashboardCharts = () => {
+        window.initDashboardCharts = () => {
+            if (!window.dashCharts) window.dashCharts = {};
             Object.keys(window.dashCharts).forEach(k => { if(window.dashCharts[k]) window.dashCharts[k].destroy(); });
-            Chart.defaults.font.family = "'Inter', sans-serif"; Chart.defaults.color = '#94a3b8'; Chart.defaults.font.weight = 'bold';
+            Chart.defaults.font.family = "'Inter', sans-serif"; 
+            Chart.defaults.color = '#94a3b8'; 
+            Chart.defaults.font.weight = 'bold';
 
             const days = [];
             for (let i = 6; i >= 0; i--) {
@@ -2864,7 +3362,39 @@
             const isSiswa = window.currentUser.role === ROLES.SISWA;
             const myNisn = window.currentUser.id;
 
-            // Chart Kehadiran
+            // 1. Chart Layanan BK (Filter Bulan Berjalan/Terpilih)
+            const ctxBk = document.getElementById('chart-bk');
+            if (ctxBk) {
+                const selectedMonth = window.dashState.bkMonthFilter || getLocalDateString().slice(0, 7);
+                const monthCatatans = (window.appState.catatans || []).filter(c => {
+                    return c.date && c.date.startsWith(selectedMonth) && (!isSiswa || c.nisn === myNisn);
+                });
+
+                const countPelanggaran = monthCatatans.filter(c => c.category === 'pelanggaran').length;
+                const countPrestasi = monthCatatans.filter(c => c.category === 'prestasi').length;
+                const countPerkembangan = monthCatatans.filter(c => c.category === 'perkembangan').length;
+
+                window.dashCharts.bk = new Chart(ctxBk, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Bimbingan Pelanggaran', 'Konseling Prestasi', 'Pendampingan Perkembangan'],
+                        datasets: [{
+                            label: 'Jumlah Layanan BK',
+                            data: [countPelanggaran, countPrestasi, countPerkembangan],
+                            backgroundColor: ['#ef4444', '#10b981', '#8b5cf6'],
+                            borderRadius: 10
+                        }]
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                    }
+                });
+            }
+
+            // 2. Chart Kehadiran
             const ctxAtt = document.getElementById('chart-attendance');
             if (ctxAtt) {
                 const countsH = days.map(day => window.appState.attendance.filter(a => a.date === day && a.status === 'H' && (!isSiswa || a.nisn === myNisn)).length);
@@ -2882,7 +3412,7 @@
                 });
             }
 
-            // Chart Rekap Akademik
+            // 3. Chart Rekap Akademik
             const ctxAcad = document.getElementById('chart-academic');
             if (ctxAcad) {
                 const acads = isSiswa ? window.appState.academics.filter(a => a.nisn === myNisn) : window.appState.academics;
@@ -2903,7 +3433,7 @@
                 });
             }
 
-            // Chart Catatan
+            // 4. Chart Catatan
             const ctxCat = document.getElementById('chart-catatan');
             if (ctxCat) {
                 const catats = isSiswa ? window.appState.catatans.filter(c => c.nisn === myNisn) : window.appState.catatans;
@@ -2923,7 +3453,7 @@
                 });
             }
 
-            // Chart Keuangan & SPP
+            // 5. Chart Keuangan & SPP
             const ctxPay = document.getElementById('chart-payment');
             if (ctxPay) {
                 const payments = isSiswa ? window.appState.payments.filter(p => p.nisn === myNisn) : window.appState.payments;
@@ -4320,120 +4850,120 @@ window.renderAcademicModalHistory = (nisn) => {
     }
 };
 
-        /* --- HALAMAN CATATAN KEDISIPLINAN --- */
     /* --- HALAMAN CATATAN KEDISIPLINAN --- */
 	window.renderCatatan = () => {
-            const content = document.getElementById('main-content');
-            const isSiswa = window.currentUser.role === ROLES.SISWA;
-            const isGuru = window.currentUser.role === ROLES.GURU;
-            const isAdmin = window.currentUser.role === ROLES.ADMIN;
-            const canEdit = isAdmin || isGuru;
+    const content = document.getElementById('main-content');
+    const isSiswa = window.currentUser.role === ROLES.SISWA;
+    const isGuru = window.currentUser.role === ROLES.GURU;
+    const isAdmin = window.currentUser.role === ROLES.ADMIN;
+    const canEdit = isAdmin || isGuru;
 
-            const availableClasses = [...new Set((window.appState.students || []).map(s => s.class))].sort();
-            const allowedStudents = window.getFilteredStudents();
-            const allowedNisns = allowedStudents.map(s => s.nisn);
+    const availableClasses = [...new Set((window.appState.students || []).map(s => s.class))].sort();
+    const allowedStudents = window.getFilteredStudents();
+    const allowedNisns = allowedStudents.map(s => s.nisn);
 
-            let catatans = window.appState.catatans || [];
+    let catatans = window.appState.catatans || [];
 
-            let filteredList = catatans.filter(c => {
-                if (isSiswa) return c.nisn === window.currentUser.id;
-                if (isGuru && window.currentUser.classes && window.currentUser.classes.length > 0) {
-                    return window.currentUser.classes.includes(c.class) || allowedNisns.includes(c.nisn);
-                }
-                return true;
-            });
+    let filteredList = catatans.filter(c => {
+        if (isSiswa) return c.nisn === window.currentUser.id;
+        if (isGuru && window.currentUser.classes && window.currentUser.classes.length > 0) {
+            return window.currentUser.classes.includes(c.class) || allowedNisns.includes(c.nisn);
+        }
+        return true;
+    });
 
-            // Filter Dropdown Kelas
-            if (window.catatanClassFilter && window.catatanClassFilter !== 'Semua') {
-                filteredList = filteredList.filter(c => c.class === window.catatanClassFilter);
-            }
+    // Filter Dropdown Kelas
+    if (window.catatanClassFilter && window.catatanClassFilter !== 'Semua') {
+        filteredList = filteredList.filter(c => c.class === window.catatanClassFilter);
+    }
 
-            // Filter Pencarian Nama atau NISN
-            if (window.catatanSearchQuery) {
-                const q = window.catatanSearchQuery.toLowerCase().trim();
-                filteredList = filteredList.filter(c => 
-                    (c.studentName && c.studentName.toLowerCase().includes(q)) || 
-                    (c.nisn && c.nisn.toLowerCase().includes(q))
-                );
-            }
+    // Filter Pencarian Nama atau NISN
+    if (window.catatanSearchQuery) {
+        const q = window.catatanSearchQuery.toLowerCase().trim();
+        filteredList = filteredList.filter(c => 
+            (c.studentName && c.studentName.toLowerCase().includes(q)) || 
+            (c.nisn && c.nisn.toLowerCase().includes(q))
+        );
+    }
 
-            const classOptionsHtml = ['Semua', ...availableClasses].map(c => `
-                <option value="${c}" ${c === window.catatanClassFilter ? 'selected' : ''}>${c === 'Semua' ? 'Semua Kelas' : 'Kelas ' + c}</option>
-            `).join('');
+    const classOptionsHtml = ['Semua', ...availableClasses].map(c => `
+        <option value="${c}" ${c === window.catatanClassFilter ? 'selected' : ''}>${c === 'Semua' ? 'Semua Kelas' : 'Kelas ' + c}</option>
+    `).join('');
 
-            let rowsHtml = filteredList.slice().reverse().map((c, idx) => `
-                <tr class="hover:bg-slate-50/80 border-b border-slate-100 text-xs sm:text-sm">
-                    <td class="p-4 font-bold text-slate-400 text-center">${idx + 1}</td>
-                    <td class="p-4 font-bold text-slate-800">${c.studentName} <span class="text-[11px] text-slate-400 block font-normal">NISN: ${c.nisn}</span></td>
-                    <td class="p-4">
-                        <span class="px-3 py-1 rounded-full text-[11px] font-extrabold uppercase ${c.category==='pelanggaran'?'bg-red-100 text-red-700':c.category==='prestasi'?'bg-emerald-100 text-emerald-700':'bg-blue-100 text-blue-700'}">
-                            ${c.category}
-                        </span>
-                    </td>
-                    <td class="p-4 font-medium text-slate-600">${c.description}</td>
-                    <td class="p-4 font-black ${c.category==='pelanggaran'?'text-red-600':'text-emerald-600'} text-base text-center">${c.category==='pelanggaran'?'-':'+'}${c.point}</td>
-                    <td class="p-4 text-slate-500 text-xs">${c.date || '-'}</td>
-                    <td class="p-4 text-center">
-                        ${isAdmin ? `
-                            <button onclick="window.confirmDelete('catatans', '${c.id}', 'catatan')" class="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-bold text-xs" title="Hapus Catatan"><i class="fas fa-trash-alt"></i></button>
-                        ` : '-'}
-                    </td>
-                </tr>
-            `).join('');
+    let rowsHtml = filteredList.slice().reverse().map((c, idx) => `
+        <tr class="hover:bg-slate-50/80 border-b border-slate-100 text-xs sm:text-sm">
+            <td class="p-4 font-bold text-slate-400 text-center">${idx + 1}</td>
+            <td class="p-4 font-bold text-slate-800">${c.studentName} <span class="text-[11px] text-slate-400 block font-normal">NISN: ${c.nisn}</span></td>
+            <td class="p-4">
+                <span class="px-3 py-1 rounded-full text-[11px] font-extrabold uppercase ${c.category==='pelanggaran'?'bg-amber-100 text-amber-700':c.category==='prestasi'?'bg-emerald-100 text-emerald-700':'bg-blue-100 text-blue-700'}">
+                    ${c.category}
+                </span>
+            </td>
+            <td class="p-4 font-medium text-slate-600">${c.description}</td>
+            <!-- PERUBAHAN: Semua poin ditampilkan sebagai bernilai positif (+) -->
+            <td class="p-4 font-black text-emerald-600 text-base text-center">+${c.point}</td>
+            <td class="p-4 text-slate-500 text-xs">${c.date || '-'}</td>
+            <td class="p-4 text-center">
+                ${isAdmin ? `
+                    <button onclick="window.confirmDelete('catatans', '${c.id}', 'catatan')" class="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-bold text-xs" title="Hapus Catatan"><i class="fas fa-trash-alt"></i></button>
+                ` : '-'}
+            </td>
+        </tr>
+    `).join('');
 
-            if (!rowsHtml) {
-                rowsHtml = `<tr><td colspan="7" class="p-8 text-center text-slate-400 font-semibold">Belum ada data catatan/disiplin ditemukan.</td></tr>`;
-            }
+    if (!rowsHtml) {
+        rowsHtml = `<tr><td colspan="7" class="p-8 text-center text-slate-400 font-semibold">Belum ada data catatan/disiplin ditemukan.</td></tr>`;
+    }
 
-            content.innerHTML = `
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 slide-up">
-                    <div>
-                        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">Catatan & Disiplin</h2>
-                        <p class="text-xs sm:text-sm text-slate-500 font-medium">
-                            ${isGuru ? 'Rekapitulasi pelanggaran, prestasi, dan perkembangan siswa pada kelas yang Anda ampu.' : 'Rekapitulasi pelanggaran, prestasi, dan perkembangan siswa.'}
-                        </p>
+    content.innerHTML = `
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 slide-up">
+            <div>
+                <h2 class="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">Catatan & Disiplin</h2>
+                <p class="text-xs sm:text-sm text-slate-500 font-medium">
+                    ${isGuru ? 'Rekapitulasi pelanggaran, prestasi, dan perkembangan siswa pada kelas yang Anda ampu.' : 'Rekapitulasi pelanggaran, prestasi, dan perkembangan siswa.'}
+                </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                ${!isSiswa ? `
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <input type="text" placeholder="Cari Nama / NISN..." value="${window.catatanSearchQuery || ''}" oninput="window.catatanSearchQuery = this.value; window.renderCatatan();" class="p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm w-36 sm:w-48">
+                        <span class="text-xs font-bold text-slate-500 whitespace-nowrap"><i class="fas fa-filter text-indigo-500"></i> Kelas:</span>
+                        <select onchange="window.catatanClassFilter = this.value; window.renderCatatan();" class="p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm">
+                            ${classOptionsHtml}
+                        </select>
                     </div>
-                    <div class="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
-                        ${!isSiswa ? `
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <input type="text" placeholder="Cari Nama / NISN..." value="${window.catatanSearchQuery || ''}" oninput="window.catatanSearchQuery = this.value; window.renderCatatan();" class="p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm w-36 sm:w-48">
-                                <span class="text-xs font-bold text-slate-500 whitespace-nowrap"><i class="fas fa-filter text-indigo-500"></i> Kelas:</span>
-                                <select onchange="window.catatanClassFilter = this.value; window.renderCatatan();" class="p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm">
-                                    ${classOptionsHtml}
-                                </select>
-                            </div>
-                        ` : ''}
-                        ${canEdit ? `
-                            <button onclick="window.startScanner('catatan_add')" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
-                                <i class="fas fa-camera"></i> Scan QR
-                            </button>
-                            <button onclick="window.openCatatanModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
-                                <i class="fas fa-plus"></i> Tambah Catatan
-                            </button>
-                        ` : ''}
-                    </div>
-                </div>
+                ` : ''}
+                ${canEdit ? `
+                    <button onclick="window.startScanner('catatan_add')" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
+                        <i class="fas fa-camera"></i> Scan QR
+                    </button>
+                    <button onclick="window.openCatatanModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
+                        <i class="fas fa-plus"></i> Tambah Catatan
+                    </button>
+                ` : ''}
+            </div>
+        </div>
 
-                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden slide-up" style="animation-delay: 0.1s;">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse min-w-[700px]">
-                            <thead>
-                                <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider text-[11px] font-extrabold border-b border-slate-100">
-                                    <th class="p-4 text-center w-12">No</th>
-                                    <th class="p-4">Nama Siswa</th>
-                                    <th class="p-4">Kategori</th>
-                                    <th class="p-4">Keterangan / Kasus</th>
-                                    <th class="p-4 text-center">Poin</th>
-                                    <th class="p-4">Tanggal</th>
-                                    <th class="p-4 text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>${rowsHtml}</tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
-        };
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden slide-up" style="animation-delay: 0.1s;">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse min-w-[700px]">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider text-[11px] font-extrabold border-b border-slate-100">
+                            <th class="p-4 text-center w-12">No</th>
+                            <th class="p-4">Nama Siswa</th>
+                            <th class="p-4">Kategori</th>
+                            <th class="p-4">Keterangan / Kasus</th>
+                            <th class="p-4 text-center">Poin</th>
+                            <th class="p-4">Tanggal</th>
+                            <th class="p-4 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            </div>
+        </div>
+    `;
+};
 
 // Helper Menampilkan Riwayat Catatan Kedisiplinan Sebelumnya di Modal
 window.renderCatatanModalHistory = (nisn) => {
@@ -4447,9 +4977,10 @@ window.renderCatatanModalHistory = (nisn) => {
     let rows = history.slice().reverse().map((c, idx) => `
         <tr class="border-b border-slate-100 text-xs">
             <td class="p-2 text-center text-slate-400 font-bold">${idx + 1}</td>
-            <td class="p-2 uppercase text-[10px] font-extrabold ${c.category==='pelanggaran'?'text-red-600':c.category==='prestasi'?'text-emerald-600':'text-blue-600'}">${c.category}</td>
+            <td class="p-2 uppercase text-[10px] font-extrabold ${c.category==='pelanggaran'?'text-amber-600':c.category==='prestasi'?'text-emerald-600':'text-blue-600'}">${c.category}</td>
             <td class="p-2 text-slate-700 font-medium">${c.description}</td>
-            <td class="p-2 text-center font-black ${c.category==='pelanggaran'?'text-red-600':'text-emerald-600'}">${c.category==='pelanggaran'?'-':'+'}${c.point}</td>
+            <!-- PERUBAHAN: Tanda poin diubah menjadi (+) positif -->
+            <td class="p-2 text-center font-black text-emerald-600">+${c.point}</td>
             <td class="p-2 text-slate-500">${c.date || '-'}</td>
         </tr>
     `).join('');
@@ -4669,62 +5200,164 @@ window.updateCatatanStudentDropdown = (selectedNisn = null) => {
                 window.renderCatatan();
             }
         };
-
-        /* --- HALAMAN PEMBAYARAN --- */
-        /* --- HALAMAN PEMBAYARAN --- */
+        
+    /* --- 2. HALAMAN UTAMA PEMBAYARAN & REKAP TUNGGAKAN --- */
 window.renderPayments = () => {
     const content = document.getElementById('main-content');
-    const payments = window.appState.payments;
+    if (!content) return;
+
+    const payments = window.appState.payments || [];
     const isSiswa = window.currentUser.role === ROLES.SISWA;
     const isAdmin = window.currentUser.role === ROLES.ADMIN;
 
+    if (!window.activePaymentTab) window.activePaymentTab = 'transaksi';
+
     const availableClasses = [...new Set((window.appState.students || []).map(s => s.class))].sort();
-    let filteredList = isSiswa ? payments.filter(p => p.nisn === window.currentUser.id) : payments;
-
-    // Filter Dropdown Kelas Tambahan
-    if (window.paymentClassFilter && window.paymentClassFilter !== 'Semua') {
-        filteredList = filteredList.filter(p => p.class === window.paymentClassFilter);
-    }
-
-    // Filter Pencarian Nama atau NISN
-    if (window.paymentSearchQuery) {
-        const q = window.paymentSearchQuery.toLowerCase().trim();
-        filteredList = filteredList.filter(p => 
-            (p.studentName && p.studentName.toLowerCase().includes(q)) || 
-            (p.nisn && p.nisn.toLowerCase().includes(q))
-        );
-    }
+    
+    // Tab Navigasi
+    const tabsHtml = `
+        <div class="flex overflow-x-auto gap-2 mb-6 custom-scrollbar pb-2">
+            <button onclick="window.activePaymentTab = 'transaksi'; window.renderPayments();" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${window.activePaymentTab==='transaksi' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}">
+                <i class="fas fa-list-alt mr-2"></i> Riwayat Transaksi
+            </button>
+            <button onclick="window.activePaymentTab = 'tunggakan'; window.renderPayments();" class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${window.activePaymentTab==='tunggakan' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}">
+                <i class="fas fa-exclamation-circle mr-2"></i> Rekap Tunggakan Siswa
+            </button>
+        </div>
+    `;
 
     const classOptionsHtml = ['Semua', ...availableClasses].map(c => `
         <option value="${c}" ${c === window.paymentClassFilter ? 'selected' : ''}>${c === 'Semua' ? 'Semua Kelas' : 'Kelas ' + c}</option>
     `).join('');
 
-    let rowsHtml = filteredList.slice().reverse().map((p, idx) => `
-        <tr class="hover:bg-slate-50/80 border-b border-slate-100 text-xs sm:text-sm">
-            <td class="p-4 font-bold text-slate-400 text-center">${idx + 1}</td>
-            <td class="p-4 font-bold text-slate-800">${p.studentName} <span class="text-[11px] text-slate-400 block font-normal">NISN: ${p.nisn}</span></td>
-            <td class="p-4 font-bold text-indigo-600">${p.type}${p.sppMonth ? ' (' + p.sppMonth + ')' : ''}</td>
-            <td class="p-4 font-black text-emerald-600 text-base">${window.formatRupiah(p.amount)}</td>
-            <td class="p-4 text-slate-500 font-medium">${p.method}</td>
-            <td class="p-4 text-slate-600 font-medium">${p.note || '-'}</td>
-            <td class="p-4 text-slate-500 text-xs">${p.date || '-'}</td>
-            <td class="p-4 text-center">
-                ${isAdmin ? `
-                    <button onclick="window.confirmDelete('payments', '${p.id}', 'payments')" class="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-bold text-xs"><i class="fas fa-trash-alt"></i></button>
-                ` : '-'}
-            </td>
-        </tr>
-    `).join('');
+    let mainBodyHtml = '';
 
-    if (!rowsHtml) {
-        rowsHtml = `<tr><td colspan="7" class="p-8 text-center text-slate-400 font-semibold">Belum ada data pembayaran ditemukan.</td></tr>`;
+    if (window.activePaymentTab === 'transaksi') {
+        let filteredList = isSiswa ? payments.filter(p => p.nisn === window.currentUser.id) : payments;
+
+        if (window.paymentClassFilter && window.paymentClassFilter !== 'Semua') {
+            filteredList = filteredList.filter(p => p.class === window.paymentClassFilter);
+        }
+
+        if (window.paymentSearchQuery) {
+            const q = window.paymentSearchQuery.toLowerCase().trim();
+            filteredList = filteredList.filter(p => 
+                (p.studentName && p.studentName.toLowerCase().includes(q)) || 
+                (p.nisn && p.nisn.toLowerCase().includes(q))
+            );
+        }
+
+        let rowsHtml = filteredList.slice().reverse().map((p, idx) => `
+            <tr class="hover:bg-slate-50/80 border-b border-slate-100 text-xs sm:text-sm">
+                <td class="p-4 font-bold text-slate-400 text-center">${idx + 1}</td>
+                <td class="p-4 font-bold text-slate-800">${p.studentName} <span class="text-[11px] text-slate-400 block font-normal">NISN: ${p.nisn}</span></td>
+                <td class="p-4 font-bold text-indigo-600">${p.type}${p.sppMonth ? ' (' + p.sppMonth + ')' : ''}</td>
+                <td class="p-4 font-black text-emerald-600 text-base">${window.formatRupiah(p.amount)}</td>
+                <td class="p-4 text-slate-500 font-medium">${p.method}</td>
+                <td class="p-4 text-slate-600 font-medium">${p.note || '-'}</td>
+                <td class="p-4 text-slate-500 text-xs">${p.date || '-'}</td>
+                <td class="p-4 text-center">
+                    ${isAdmin ? `
+                        <button onclick="window.confirmDelete('payments', '${p.id}', 'payments')" class="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-bold text-xs"><i class="fas fa-trash-alt"></i></button>
+                    ` : '-'}
+                </td>
+            </tr>
+        `).join('');
+
+        if (!rowsHtml) rowsHtml = `<tr><td colspan="8" class="p-8 text-center text-slate-400 font-semibold">Belum ada data pembayaran ditemukan.</td></tr>`;
+
+        mainBodyHtml = `
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden slide-up">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse min-w-[700px]">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider text-[11px] font-extrabold border-b border-slate-100">
+                                <th class="p-4 text-center w-12">No</th>
+                                <th class="p-4">Nama Siswa</th>
+                                <th class="p-4">Jenis Pembayaran</th>
+                                <th class="p-4">Nominal</th>
+                                <th class="p-4">Metode</th>
+                                <th class="p-4">Keterangan / Uraian</th>
+                                <th class="p-4">Tanggal</th>
+                                <th class="p-4 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    } else {
+        // TAMPILAN REKAP TUNGGAKAN SISWA
+        let students = window.getFilteredStudents();
+        if (isSiswa) {
+            students = students.filter(s => s.nisn === window.currentUser.id);
+        } else if (window.paymentClassFilter && window.paymentClassFilter !== 'Semua') {
+            students = students.filter(s => s.class === window.paymentClassFilter);
+        }
+
+        if (window.paymentSearchQuery) {
+            const q = window.paymentSearchQuery.toLowerCase().trim();
+            students = students.filter(s => 
+                (s.name && s.name.toLowerCase().includes(q)) || 
+                (s.nisn && s.nisn.toLowerCase().includes(q))
+            );
+        }
+
+        let arrearsRowsHtml = students.map((s, idx) => {
+            const summary = window.getStudentArrearsSummary(s.nisn);
+            const sppUnpaidBadge = summary.unpaidSppMonths.length > 0 
+                ? `<span class="bg-rose-100 text-rose-700 px-2 py-0.5 rounded font-bold text-[10px]">${summary.unpaidSppMonths.length} Bulan (${summary.unpaidSppMonths.join(', ')})</span>`
+                : `<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold text-[10px]">Lunas SPP</span>`;
+
+            return `
+                <tr class="hover:bg-slate-50/80 border-b border-slate-100 text-xs sm:text-sm">
+                    <td class="p-4 font-bold text-slate-400 text-center">${idx + 1}</td>
+                    <td class="p-4 font-extrabold text-slate-800">${s.name} <span class="text-[10px] text-slate-400 block font-normal">NISN: ${s.nisn}</span></td>
+                    <td class="p-4 font-bold text-indigo-600 text-center">Kelas ${s.class}</td>
+                    <td class="p-4">${sppUnpaidBadge}</td>
+                    <td class="p-4 font-black text-rose-600">${window.formatRupiah(summary.totalSppArrears)}</td>
+                    <td class="p-4 font-black text-rose-600">${window.formatRupiah(summary.totalNonSppArrears)}</td>
+                    <td class="p-4 font-black text-indigo-700 text-base">${window.formatRupiah(summary.grandTotalArrears)}</td>
+                    <td class="p-4 text-center">
+                        <button onclick="window.openPaymentModal('${s.nisn}')" class="px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl font-bold text-xs border border-indigo-200" title="Bayar Tagihan">
+                            <i class="fas fa-cash-register mr-1"></i> Bayar
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        if (!arrearsRowsHtml) arrearsRowsHtml = `<tr><td colspan="8" class="p-8 text-center text-slate-400 font-semibold">Tidak ada data tunggakan siswa ditemukan.</td></tr>`;
+
+        mainBodyHtml = `
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden slide-up">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse min-w-[750px]">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider text-[11px] font-extrabold border-b border-slate-100">
+                                <th class="p-4 text-center w-12">No</th>
+                                <th class="p-4">Nama Siswa</th>
+                                <th class="p-4 text-center">Kelas</th>
+                                <th class="p-4">Sisa Bulan SPP</th>
+                                <th class="p-4">Tunggakan SPP</th>
+                                <th class="p-4">Tunggakan Lainnya</th>
+                                <th class="p-4">Total Tunggakan</th>
+                                <th class="p-4 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>${arrearsRowsHtml}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
     }
 
     content.innerHTML = `
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 slide-up">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 slide-up">
             <div>
                 <h2 class="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">Pembayaran SPP & Keuangan</h2>
-                <p class="text-xs sm:text-sm text-slate-500 font-medium">Kelola administrasi pembayaran siswa.</p>
+                <p class="text-xs sm:text-sm text-slate-500 font-medium">Kelola administrasi dan cek tunggakan pembayaran siswa.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
                 ${!isSiswa ? `
@@ -4737,9 +5370,17 @@ window.renderPayments = () => {
                     </div>
                 ` : ''}
                 ${isAdmin ? `
-                    <button onclick="window.startScanner('payments_add')" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
-                        <i class="fas fa-camera"></i> Scan QR
+                    <!-- TOMBOL ATUR TARIF KELAS DI SINI -->
+                    <button onclick="window.openTariffConfigModal()" class="px-4 py-2.5 bg-slate-700 hover:bg-slate-800 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
+                        <i class="fas fa-sliders-h"></i> Atur Tarif Kelas
                     </button>
+                ` : ''}
+                ${isAdmin && window.activePaymentTab === 'tunggakan' ? `
+                    <button onclick="window.downloadArrearsExcel()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
+                        <i class="fas fa-file-excel"></i> Unduh Rekap
+                    </button>
+                ` : ''}
+                ${isAdmin ? `
                     <button onclick="window.openPaymentModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
                         <i class="fas fa-plus"></i> Input Pembayaran
                     </button>
@@ -4747,25 +5388,8 @@ window.renderPayments = () => {
             </div>
         </div>
 
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden slide-up" style="animation-delay: 0.1s;">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse min-w-[700px]">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider text-[11px] font-extrabold border-b border-slate-100">
-                        <th class="p-4 text-center w-12">No</th>
-                        <th class="p-4">Nama Siswa</th>
-                        <th class="p-4">Jenis Pembayaran</th>
-                        <th class="p-4">Nominal</th>
-                        <th class="p-4">Metode</th>
-                        <th class="p-4">Keterangan / Uraian</th>
-                        <th class="p-4">Tanggal</th>
-                        <th class="p-4 text-center">Aksi</th>
-                    </tr>
-                    </thead>
-                    <tbody>${rowsHtml}</tbody>
-                </table>
-            </div>
-        </div>
+        ${tabsHtml}
+        ${mainBodyHtml}
     `;
 };
 
@@ -4981,20 +5605,20 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
 		};
 
         // --- KODE TAMBAHAN: FUNGSI HANDLER BULAN SPP & KETERANGAN ---
-window.toggleSppMonthSelector = () => {
-    const payType = document.getElementById('pay-type')?.value;
-    const container = document.getElementById('spp-month-container');
-    const nisn = document.getElementById('pay-nisn')?.value;
+		window.toggleSppMonthSelector = () => {
+			const payType = document.getElementById('pay-type')?.value;
+			const container = document.getElementById('spp-month-container');
+			const nisn = document.getElementById('pay-nisn')?.value;
 
-    if (payType === 'SPP Bulanan') {
-        if (container) container.classList.remove('hidden');
-        if (nisn) window.checkSppMonthsStatus(nisn);
-    } else {
-        if (container) container.classList.add('hidden');
-    }
-};
+			if (payType === 'SPP Bulanan') {
+				if (container) container.classList.remove('hidden');
+				if (nisn) window.checkSppMonthsStatus(nisn);
+			} else {
+				if (container) container.classList.add('hidden');
+			}
+		};
 
-window.checkSppMonthsStatus = (nisn) => {
+	window.checkSppMonthsStatus = (nisn) => {
     const monthsContainer = document.getElementById('spp-months-list');
     if (!monthsContainer) return;
 
@@ -5033,16 +5657,324 @@ window.checkSppMonthsStatus = (nisn) => {
             `;
         }
     }).join('');
-};
+	};
 
-window.autoFillSppNote = (month) => {
+	window.autoFillSppNote = (month) => {
     const noteElem = document.getElementById('pay-note');
     if (noteElem) {
         noteElem.value = `Pembayaran SPP Bulan ${month}`;
     }
-};
+	};
+	
+	// =========================================================
+        // KONFIGURASI TARIF PEMBAYARAN PER KELAS
+        // =========================================================
+        const TARIFF_CONFIG = {
+            // SPP Bulanan per Kelas
+            spp: {
+                '1': 50000,
+                '2': 50000,
+                '3': 50000,
+                '4': 80000,
+                '5': 80000,
+                '6': 80000
+            },
+            // Target Tagihan Non-SPP per Kelas (Contoh)
+            nonSpp: {
+                'Gedung / Infaq Bangunan': { '1': 500000, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0 },
+                'Seragam': { '1': 350000, '2': 100000, '3': 100000, '4': 200000, '5': 100000, '6': 100000 },
+                'Buku & LKS': { '1': 150000, '2': 150000, '3': 150000, '4': 200000, '5': 200000, '6': 200000 },
+                'Kegiatan & Ujian': { '1': 100000, '2': 100000, '3': 100000, '4': 150000, '5': 150000, '6': 250000 }
+            }
+        };
+		
+		// =========================================================
+        // 1. MODAL & PENYIMPANAN PENGATURAN TARIF PER KELAS (DINAMIS)
+        // =========================================================
+        // =========================================================
+        // PENGATURAN TARIF PEMBAYARAN PER KELAS & TAMBAH JENIS TRANSAKSI
+        // =========================================================
+        window.openTariffConfigModal = function() {
+            // Ambil daftar kelas unik dari data siswa
+            const availableClasses = [...new Set((window.appState.students || [])
+                .map(s => String(s.class || '').trim())
+                .filter(c => c !== ''))]
+                .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
-        /* --- HALAMAN JADWAL PELAJARAN --- */
+            const classes = availableClasses.length > 0 ? availableClasses : ['1', '2', '3', '4', '5', '6'];
+
+            // Gabungkan PAYMENT_TYPES default dengan Custom Payment Types yang tersimpan
+            const defaultTypes = PAYMENT_TYPES || ['SPP Bulanan', 'Uang Seragam', 'Uang Buku', 'Uang Gedung', 'Kegiatan Tahunan', 'Lainnya'];
+            const customTypes = (window.appState.settings && window.appState.settings.customPaymentTypes) || [];
+            const allTypes = [...new Set([...defaultTypes, ...customTypes])];
+
+            const currentTariffs = window.appState.tariffs || {};
+
+            let tableRows = allTypes.map(type => {
+                let inputsHtml = classes.map(cls => {
+                    const val = (currentTariffs[type] && currentTariffs[type][cls]) ? currentTariffs[type][cls] : 0;
+                    return `
+                        <td class="p-2">
+                            <input type="number" id="tariff_${type.replace(/\s+/g, '_')}_${cls.replace(/\s+/g, '_')}" 
+                                value="${val}" 
+                                placeholder="0"
+                                class="w-full p-2 text-xs border border-slate-200 rounded-lg font-bold text-slate-700 text-right focus:border-indigo-600 outline-none">
+                        </td>
+                    `;
+                }).join('');
+
+                return `
+                    <tr class="border-b border-slate-100 hover:bg-slate-50/50">
+                        <td class="p-3 font-bold text-slate-700 text-xs">
+                            ${type}
+                        </td>
+                        ${inputsHtml}
+                    </tr>
+                `;
+            }).join('');
+
+            const modalHtml = `
+                <div id="tariffModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 fade-in">
+                    <div class="bg-white rounded-3xl max-w-4xl w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 class="text-lg font-extrabold text-slate-800">Pengaturan Tarif Pembayaran per Kelas</h3>
+                                <p class="text-xs text-slate-500">Atur besaran nominal tagihan standar per kelas serta tambahkan jenis transaksi pembayaran baru.</p>
+                            </div>
+                            <button onclick="document.getElementById('tariffModal').remove()" class="text-slate-400 hover:text-slate-600 p-2"><i class="fas fa-times text-xl"></i></button>
+                        </div>
+
+                        <!-- INPUT FORM MENAMBAH JENIS TRANSAKSI BARU -->
+                        <div class="bg-indigo-50/60 p-3.5 rounded-2xl border border-indigo-100 mb-4 flex flex-col sm:flex-row items-center gap-3">
+                            <div class="flex-1 w-full">
+                                <label class="text-[10px] font-extrabold text-indigo-700 uppercase tracking-wider block mb-1">Tambah Jenis Transaksi / Pembayaran Baru</label>
+                                <input type="text" id="new-transaction-type-input" placeholder="Contoh: Infaq Pembangunan, Uang Komputer, dll..." class="w-full p-2.5 text-xs bg-white border border-indigo-200 rounded-xl font-bold text-slate-800 outline-none focus:border-indigo-600 shadow-sm">
+                            </div>
+                            <button type="button" onclick="window.addNewTransactionType()" class="w-full sm:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-2 self-end">
+                                <i class="fas fa-plus"></i> Tambah Jenis
+                            </button>
+                        </div>
+
+                        <div class="overflow-x-auto overflow-y-auto flex-1 mb-4 border border-slate-100 rounded-2xl custom-scrollbar">
+                            <table class="w-full text-left border-collapse min-w-[600px]">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wider font-extrabold border-b border-slate-100">
+                                        <th class="p-3">Jenis Pembayaran</th>
+                                        ${classes.map(c => `<th class="p-3 text-center">Kelas ${c}</th>`).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${tableRows}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                            <button onclick="document.getElementById('tariffModal').remove()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl">Batal</button>
+                            <button onclick="window.saveTariffConfig()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-2">
+                                <i class="fas fa-save"></i> Simpan Tarif
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const existingModal = document.getElementById('tariffModal');
+            if (existingModal) existingModal.remove();
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        };
+
+        // FUNGSI UNTUK MENAMBAH JENIS TRANSAKSI BARU
+        window.addNewTransactionType = function() {
+            const input = document.getElementById('new-transaction-type-input');
+            if (!input) return;
+
+            const newType = input.value.trim();
+            if (!newType) {
+                window.showToast("Masukkan nama jenis transaksi terlebih dahulu!", "error");
+                return;
+            }
+
+            if (!window.appState.settings) {
+                window.appState.settings = {};
+            }
+            if (!window.appState.settings.customPaymentTypes) {
+                window.appState.settings.customPaymentTypes = [];
+            }
+
+            // Cek duplikasi
+            const defaultTypes = PAYMENT_TYPES || [];
+            if (defaultTypes.includes(newType) || window.appState.settings.customPaymentTypes.includes(newType)) {
+                window.showToast("Jenis transaksi ini sudah ada!", "info");
+                return;
+            }
+
+            // Tambahkan ke state lokal
+            window.appState.settings.customPaymentTypes.push(newType);
+
+            // Tambahkan juga ke array global PAYMENT_TYPES jika ada
+            if (typeof PAYMENT_TYPES !== 'undefined' && Array.isArray(PAYMENT_TYPES) && !PAYMENT_TYPES.includes(newType)) {
+                PAYMENT_TYPES.push(newType);
+            }
+
+            window.showToast(`Jenis transaksi "${newType}" berhasil ditambahkan!`, "success");
+            
+            // Re-render modal pengaturan tarif
+            window.openTariffConfigModal();
+        };
+
+        // FUNGSI UNTUK MENYIMPAN KONFIGURASI TARIF DAN CUSTOM PAYMENT TYPES
+        // FUNGSI UNTUK MENYIMPAN KONFIGURASI TARIF DAN CUSTOM PAYMENT TYPES (PERBAIKAN ERROR)
+        window.saveTariffConfig = async function() {
+            const availableClasses = [...new Set((window.appState.students || [])
+                .map(s => String(s.class || '').trim())
+                .filter(c => c !== ''))]
+                .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+            const classes = availableClasses.length > 0 ? availableClasses : ['1', '2', '3', '4', '5', '6'];
+            
+            const defaultTypes = PAYMENT_TYPES || ['SPP Bulanan', 'Uang Seragam', 'Uang Buku', 'Uang Gedung', 'Kegiatan Tahunan', 'Lainnya'];
+            const customTypes = (window.appState.settings && window.appState.settings.customPaymentTypes) || [];
+            const allTypes = [...new Set([...defaultTypes, ...customTypes])];
+
+            const newTariffs = {};
+
+            allTypes.forEach(type => {
+                newTariffs[type] = {};
+                classes.forEach(cls => {
+                    const inputEl = document.getElementById(`tariff_${type.replace(/\s+/g, '_')}_${cls.replace(/\s+/g, '_')}`);
+                    newTariffs[type][cls] = inputEl ? (parseFloat(inputEl.value) || 0) : 0;
+                });
+            });
+
+            try {
+                // Update State Settings secara aman (Object, bukan Array)
+                if (!window.appState.settings) window.appState.settings = {};
+                window.appState.settings.customPaymentTypes = customTypes;
+
+                // Simpan Custom Payment Types ke Firestore Document 'settings/main'
+                if (window.db && window.fs) {
+                    await window.fs.setDoc(window.fs.doc(window.db, 'settings', 'main'), { 
+                        customPaymentTypes: customTypes 
+                    }, { merge: true });
+
+                    // Simpan Tarif ke Firestore Document 'settings/tariffs'
+                    await window.fs.setDoc(window.fs.doc(window.db, 'settings', 'tariffs'), newTariffs, { merge: true });
+                }
+
+                window.appState.tariffs = newTariffs;
+                window.showToast("Berhasil menyimpan pengaturan tarif dan jenis transaksi!", "success");
+
+                const modal = document.getElementById('tariffModal');
+                if (modal) modal.remove();
+
+                if (typeof window.renderPayments === 'function') {
+                    window.renderPayments();
+                }
+            } catch (err) {
+                console.error("Gagal menyimpan tarif:", err);
+                window.showToast("Gagal menyimpan tarif ke database.", "error");
+            }
+        };
+		
+        window.getStudentArrearsSummary = function(nisn) {
+            const student = (window.appState.students || []).find(s => s.nisn === nisn);
+            if (!student) return null;
+
+            const studentClass = String(student.class || '').trim();
+            const studentPayments = (window.appState.payments || []).filter(p => p.nisn === nisn);
+            const sppMonths = ['Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'];
+            const tariffs = window.appState.tariffs || {};
+
+            // 1. Ambil Tarif SPP Dinamis dari Input UI Admin
+            const sppTariff = (tariffs['SPP Bulanan'] && tariffs['SPP Bulanan'][studentClass]) || 0;
+
+            const paidSppMonths = [];
+            studentPayments.filter(p => p.type === 'SPP Bulanan').forEach(p => {
+                if (p.sppMonth) {
+                    paidSppMonths.push(p.sppMonth);
+                } else if (p.note) {
+                    sppMonths.forEach(m => {
+                        if (p.note.toLowerCase().includes(m.toLowerCase())) paidSppMonths.push(m);
+                    });
+                }
+            });
+
+            const unpaidSppMonths = sppMonths.filter(m => !paidSppMonths.includes(m));
+            const totalSppArrears = unpaidSppMonths.length * sppTariff;
+
+            // 2. Gabungkan Jenis Pembayaran Bawaan + Kustom untuk Menghitung Tunggakan Lainnya
+            const defaultTypes = (typeof PAYMENT_TYPES !== 'undefined' && Array.isArray(PAYMENT_TYPES)) 
+                ? PAYMENT_TYPES 
+                : ['SPP Bulanan', 'Uang Seragam', 'Uang Buku', 'Uang Gedung', 'Kegiatan Tahunan', 'Lainnya'];
+            
+            const customTypes = (window.appState.settings && window.appState.settings.customPaymentTypes) || [];
+            
+            // Gabungkan semua jenis pembayaran unik, lalu keluarkan 'SPP Bulanan'
+            const allPaymentTypes = [...new Set([...defaultTypes, ...customTypes, ...Object.keys(tariffs)])];
+            const nonSppTypes = allPaymentTypes.filter(t => t !== 'SPP Bulanan');
+
+            const nonSppDetails = {};
+            let totalNonSppArrears = 0;
+
+            nonSppTypes.forEach(type => {
+                // Ambil target tarif nominal untuk kelas siswa saat ini
+                const targetAmount = (tariffs[type] && tariffs[type][studentClass]) ? parseFloat(tariffs[type][studentClass]) : 0;
+                
+                // Hitung total nominal yang sudah dibayarkan siswa untuk jenis pembayaran ini
+                const paidAmount = studentPayments
+                    .filter(p => p.type === type)
+                    .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+
+                const arrears = Math.max(0, targetAmount - paidAmount);
+                nonSppDetails[type] = {
+                    target: targetAmount,
+                    paid: paidAmount,
+                    arrears: arrears
+                };
+                totalNonSppArrears += arrears;
+            });
+
+            return {
+                student: student,
+                sppTariff: sppTariff,
+                unpaidSppMonths: unpaidSppMonths,
+                totalSppArrears: totalSppArrears,
+                nonSppDetails: nonSppDetails,
+                totalNonSppArrears: totalNonSppArrears,
+                grandTotalArrears: totalSppArrears + totalNonSppArrears
+            };
+        };
+
+        window.downloadArrearsExcel = function() {
+            const currentClass = window.paymentClassFilter || 'Semua';
+            let students = window.getFilteredStudents();
+            if (currentClass !== 'Semua') {
+                students = students.filter(s => s.class === currentClass);
+            }
+
+            const exportData = students.map((s, idx) => {
+                const summary = window.getStudentArrearsSummary(s.nisn);
+                return {
+                    "No": idx + 1,
+                    "NISN": s.nisn,
+                    "Nama Siswa": s.name,
+                    "Kelas": s.class,
+                    "Tunggakan SPP (Bulan)": summary.unpaidSppMonths.join(', ') || 'Lunas',
+                    "Nominal Tunggakan SPP": summary.totalSppArrears,
+                    "Nominal Tunggakan Non-SPP": summary.totalNonSppArrears,
+                    "Total Tunggakan": summary.grandTotalArrears
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Rekap Tunggakan");
+            XLSX.writeFile(wb, `Laporan_Tunggakan_Siswa_${currentClass}_${new Date().toISOString().split('T')[0]}.xlsx`);
+            window.showToast("Berhasil mengunduh laporan tunggakan Excel!", "success");
+        };
+
        /* --- HALAMAN JADWAL PELAJARAN (TAMPILAN KOTAK-KOTAK/GRID PER HARI & KELAS) --- */
         window.renderSchedules = () => {
             const content = document.getElementById('main-content');
@@ -5511,49 +6443,50 @@ window.autoFillSppNote = (month) => {
         };
 
         window.showDetailRecap = (type, nisn) => {
-            const student = window.appState.students.find(s => s.nisn === nisn);
-            if(!student) return;
+    const student = window.appState.students.find(s => s.nisn === nisn);
+    if(!student) return;
 
-            let detailHtml = ''; let title = '';
+    let detailHtml = ''; let title = '';
 
-            if (type === 'akademik') {
-                title = `Rincian Nilai Akademik - ${student.name}`;
-                const data = window.appState.academics.filter(a => a.nisn === nisn);
-                detailHtml = data.length === 0 ? '<p class="text-center text-slate-500 py-4">Belum ada nilai.</p>' : `
-                    <table class="w-full text-left text-xs sm:text-sm border-collapse">
-                        <tr class="bg-slate-50 font-bold text-slate-600 border-b border-slate-200"><th class="p-3">Mata Pelajaran</th><th class="p-3">Jenis</th><th class="p-3">Nilai</th><th class="p-3">Tanggal</th></tr>
-                        ${data.map(d => `<tr class="border-b border-slate-100 hover:bg-slate-50"><td class="p-3 font-bold text-slate-800">${d.subject}</td><td class="p-3">${d.type}</td><td class="p-3 font-black text-indigo-600">${d.score}</td><td class="p-3 text-slate-500">${d.date}</td></tr>`).join('')}
-                    </table>
-                `;
-            } else if (type === 'catatan') {
-                title = `Rincian Catatan Kedisiplinan - ${student.name}`;
-                const data = window.appState.catatans.filter(a => a.nisn === nisn);
-                detailHtml = data.length === 0 ? '<p class="text-center text-slate-500 py-4">Belum ada catatan.</p>' : `
-                    <table class="w-full text-left text-xs sm:text-sm border-collapse">
-                        <tr class="bg-slate-50 font-bold text-slate-600 border-b border-slate-200"><th class="p-3">Kategori</th><th class="p-3">Keterangan</th><th class="p-3">Poin</th><th class="p-3">Tanggal</th></tr>
-                        ${data.map(d => `<tr class="border-b border-slate-100 hover:bg-slate-50"><td class="p-3 uppercase text-[10px] font-extrabold ${d.category==='pelanggaran'?'text-red-600':d.category==='prestasi'?'text-emerald-600':'text-blue-600'}">${d.category}</td><td class="p-3 font-medium">${d.description}</td><td class="p-3 font-black">${d.point}</td><td class="p-3 text-slate-500">${d.date}</td></tr>`).join('')}
-                    </table>
-                `;
-            } else if (type === 'pembayaran') {
-                title = `Rincian Pembayaran SPP - ${student.name}`;
-                const data = window.appState.payments.filter(a => a.nisn === nisn);
-                detailHtml = data.length === 0 ? '<p class="text-center text-slate-500 py-4">Belum ada pembayaran.</p>' : `
-                    <table class="w-full text-left text-xs sm:text-sm border-collapse">
-                        <tr class="bg-slate-50 font-bold text-slate-600 border-b border-slate-200"><th class="p-3">Jenis Pembayaran</th><th class="p-3">Metode</th><th class="p-3">Nominal</th><th class="p-3">Tanggal</th></tr>
-                        ${data.map(d => `<tr class="border-b border-slate-100 hover:bg-slate-50"><td class="p-3 font-bold text-slate-800">${d.type}</td><td class="p-3">${d.method}</td><td class="p-3 font-black text-emerald-600">${window.formatRupiah(d.amount)}</td><td class="p-3 text-slate-500">${d.date}</td></tr>`).join('')}
-                    </table>
-                `;
-            }
+    if (type === 'akademik') {
+        title = `Rincian Nilai Akademik - ${student.name}`;
+        const data = window.appState.academics.filter(a => a.nisn === nisn);
+        detailHtml = data.length === 0 ? '<p class="text-center text-slate-500 py-4">Belum ada nilai.</p>' : `
+            <table class="w-full text-left text-xs sm:text-sm border-collapse">
+                <tr class="bg-slate-50 font-bold text-slate-600 border-b border-slate-200"><th class="p-3">Mata Pelajaran</th><th class="p-3">Jenis</th><th class="p-3">Nilai</th><th class="p-3">Tanggal</th></tr>
+                ${data.map(d => `<tr class="border-b border-slate-100 hover:bg-slate-50"><td class="p-3 font-bold text-slate-800">${d.subject}</td><td class="p-3">${d.type}</td><td class="p-3 font-black text-indigo-600">${d.score}</td><td class="p-3 text-slate-500">${d.date}</td></tr>`).join('')}
+            </table>
+        `;
+    } else if (type === 'catatan') {
+        title = `Rincian Catatan Kedisiplinan - ${student.name}`;
+        const data = window.appState.catatans.filter(a => a.nisn === nisn);
+        detailHtml = data.length === 0 ? '<p class="text-center text-slate-500 py-4">Belum ada catatan.</p>' : `
+            <table class="w-full text-left text-xs sm:text-sm border-collapse">
+                <tr class="bg-slate-50 font-bold text-slate-600 border-b border-slate-200"><th class="p-3">Kategori</th><th class="p-3">Keterangan</th><th class="p-3">Poin</th><th class="p-3">Tanggal</th></tr>
+                <!-- PERUBAHAN: Tanda poin diubah menjadi (+) positif -->
+                ${data.map(d => `<tr class="border-b border-slate-100 hover:bg-slate-50"><td class="p-3 uppercase text-[10px] font-extrabold ${d.category==='pelanggaran'?'text-amber-600':d.category==='prestasi'?'text-emerald-600':'text-blue-600'}">${d.category}</td><td class="p-3 font-medium">${d.description}</td><td class="p-3 font-black text-emerald-600">+${d.point}</td><td class="p-3 text-slate-500">${d.date}</td></tr>`).join('')}
+            </table>
+        `;
+    } else if (type === 'pembayaran') {
+        title = `Rincian Pembayaran SPP - ${student.name}`;
+        const data = window.appState.payments.filter(a => a.nisn === nisn);
+        detailHtml = data.length === 0 ? '<p class="text-center text-slate-500 py-4">Belum ada pembayaran.</p>' : `
+            <table class="w-full text-left text-xs sm:text-sm border-collapse">
+                <tr class="bg-slate-50 font-bold text-slate-600 border-b border-slate-200"><th class="p-3">Jenis Pembayaran</th><th class="p-3">Metode</th><th class="p-3">Nominal</th><th class="p-3">Tanggal</th></tr>
+                ${data.map(d => `<tr class="border-b border-slate-100 hover:bg-slate-50"><td class="p-3 font-bold text-slate-800">${d.type}</td><td class="p-3">${d.method}</td><td class="p-3 font-black text-emerald-600">${window.formatRupiah(d.amount)}</td><td class="p-3 text-slate-500">${d.date}</td></tr>`).join('')}
+            </table>
+        `;
+    }
 
-            window.openModal(`
-                <div class="p-6 sm:p-8">
-                    <h3 class="text-lg sm:text-xl font-extrabold text-slate-800 mb-6">${title}</h3>
-                    <div class="overflow-x-auto border border-slate-200 rounded-2xl max-h-[60vh] custom-scrollbar overflow-y-auto">
-                        ${detailHtml}
-                    </div>
-                </div>
-            `, 'max-w-3xl');
-        };
+    window.openModal(`
+        <div class="p-6 sm:p-8">
+            <h3 class="text-lg sm:text-xl font-extrabold text-slate-800 mb-6">${title}</h3>
+            <div class="overflow-x-auto border border-slate-200 rounded-2xl max-h-[60vh] custom-scrollbar overflow-y-auto">
+                ${detailHtml}
+            </div>
+        </div>
+    `, 'max-w-3xl');
+};
 
         /* --- FUNGSIONALITAS RAPOT WORD & SISWA --- */
         window.downloadRapotWord = () => {
