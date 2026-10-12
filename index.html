@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -501,6 +502,8 @@
             return `${year}-${month}-${day}`;
         };
 
+
+
         window.currentUser = null;
         window.db = null; window.fs = null; window.auth = null; 
         window.html5QrCode = null; window.scannerContext = 'attendance';
@@ -525,7 +528,7 @@
         window.paymentSearchQuery = '';
 
         const ROLES = { ADMIN: 'admin', GURU: 'guru', SISWA: 'siswa' };
-        const CONSTANTS = { ADMIN_PWD: "aa", GURU_PWD: "guru", LATE_TIME: "07:15" };
+        const CONSTANTS = { ADMIN_PWD: "aa1", GURU_PWD: "guru", LATE_TIME: "07:15" };
 
         const ACADEMIC_TYPES = ['Tugas Harian', 'Ulangan Harian', 'Praktikum', 'UTS / STS', 'UAS / SAS'];
         const PAYMENT_TYPES = ['SPP Bulanan', 'Uang Seragam', 'Uang Buku', 'Uang Gedung', 'Kegiatan Tahunan', 'Lainnya'];
@@ -747,7 +750,7 @@
 
         const loadAllDataFromCloud = async () => {
             if(!window.db) return;
-            const colls = ['students', 'teachers', 'attendance', 'payments', 'academics', 'catatans', 'schedules', 'announcements', 'homerooms'];
+            const colls = ['students', 'teachers', 'attendance', 'payments', 'academics', 'catatans', 'schedules', 'announcements', 'homerooms', 'teacherAttendance'];
             for (let c of colls) {
                 try {
                     const snap = await window.fs.getDocs(window.fs.collection(window.db, c));
@@ -987,13 +990,15 @@
                 { id: 'teachers', icon: 'fa-chalkboard-teacher', text: 'Data Guru', roles: [ROLES.ADMIN] },
                 { id: 'homerooms', icon: 'fa-user-tie', text: 'Master Wali Kelas', roles: [ROLES.ADMIN, ROLES.GURU] },
                 { id: 'attendance', icon: 'fa-user-check', text: 'Absensi Kehadiran', roles: [ROLES.ADMIN, ...(isWaliKelas ? [ROLES.GURU] : [])] },
+                { id: 'teacher-attendance', icon: 'fa-user-clock', text: 'Absen Mengajar', roles: [ROLES.ADMIN, ROLES.GURU] },
                 { id: 'academics', icon: 'fa-book-open', text: 'Akademik & Nilai', roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA] },
                 { id: 'catatan', icon: 'fa-clipboard-list', text: 'Catatan Siswa', roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA] },
                 { id: 'payments', icon: 'fa-money-bill-wave', text: 'Pembayaran', roles: [ROLES.ADMIN, ROLES.SISWA] },
                 { id: 'schedules', icon: 'fa-calendar-alt', text: 'Jadwal Pelajaran', roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA] },
                 { id: 'announcements', icon: 'fa-bullhorn', text: 'Pengumuman', roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA] },
                 { id: 'rapot', icon: 'fa-file-word', text: 'Rapot Siswa', roles: [ROLES.SISWA] },
-                
+                { id: 'announcements', icon: 'fa-bullhorn', text: 'Pengumuman', roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA] },
+				{ id: 'cbt', icon: 'fa-laptop-code', text: 'Ujian CBT', roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA] }, // <-- TARUH DI SINI
                 { id: 'recap', icon: 'fa-table', text: 'Rekap Data', roles: [ROLES.ADMIN] },
                 { id: 'laporan', icon: 'fa-file-excel', text: 'Laporan Data', roles: [ROLES.ADMIN] },
                 { id: 'rapot_sts', icon: 'fa-file-invoice', text: 'Raport STS', roles: [ROLES.ADMIN, ROLES.SISWA, ...(isWaliKelas ? [ROLES.GURU] : [])] },
@@ -1133,7 +1138,7 @@
             window.openBatchAcademicModal();
         };
 
-        window.processBatchAcademic = async function(e) {
+    window.processBatchAcademic = async function(e) {
     e.preventDefault();
     const subject = document.getElementById('batch-acad-subject').value.trim();
     const type = document.getElementById('batch-acad-type').value;
@@ -1305,6 +1310,36 @@
         btn.innerHTML = `<i class="fas fa-save"></i> Simpan Semua Nilai`;
     }
     };
+
+    // =========================================================
+// PERBAIKAN TELAK: AUTO-SYNC MAPEL & NORMALISASI NILAI PJOK
+// =========================================================
+window.normalizeSubjectName = function(subjectName) {
+    if (!subjectName) return '';
+    const clean = subjectName.trim().toLowerCase();
+    if (clean === 'pjok' || clean.includes('jasmani') || clean.includes('olahraga')) {
+        return 'PJOK';
+    }
+    return subjectName.trim();
+};
+
+window.ensureTeacherHasSubject = function(teacherId, subjectName) {
+    if (!teacherId || !window.appState.teachers) return;
+    const normalized = window.normalizeSubjectName(subjectName);
+    const teacher = window.appState.teachers.find(t => t.id === teacherId || t.nip === teacherId);
+    if (teacher) {
+        if (!Array.isArray(teacher.subjects)) teacher.subjects = [];
+        // Cek apakah mapel sudah ada (aman dari perbedaan huruf kapital)
+        const exists = teacher.subjects.some(s => s.trim().toLowerCase() === normalized.toLowerCase());
+        if (!exists) {
+            teacher.subjects.push(normalized);
+            // Simpan pembaruan profil guru ke cloud secara otomatis
+            if (window.db && window.fs) {
+                window.fs.setDoc(window.fs.doc(window.db, 'teachers', teacher.id || teacher.nip), teacher, { merge: true });
+            }
+        }
+    }
+};
 		
         window.navigate = (pageId) => {
             if (window.innerWidth < 1024 && !document.getElementById('sidebar-overlay').classList.contains('hidden')) {
@@ -1342,6 +1377,7 @@
 
             if (pageId === 'dashboard') window.renderDashboard();
             else if (pageId === 'student_attendance') window.renderStudentAttendanceView();
+            else if (pageId === 'teacher-attendance') window.renderTeacherAttendance();
             else if (pageId === 'attendance') window.renderAttendance();
             else if (pageId === 'students') window.renderStudents();
             else if (pageId === 'teachers') window.renderTeachers();
@@ -1350,6 +1386,7 @@
             else if (pageId === 'payments') window.renderPayments();
             else if (pageId === 'schedules') window.renderSchedules();
             else if (pageId === 'announcements') window.renderAnnouncements();
+			else if (pageId === 'cbt') window.renderCBT(); // <-- TARUH DI SINI
             else if (pageId === 'recap') window.renderRecapData();
             else if (pageId === 'laporan') window.renderLaporan();
             else if (pageId === 'rapot_sts') window.renderRapotSTS();
@@ -4629,187 +4666,282 @@ window.processManualAttendance = async function(e) {
     }
 };
 
-	/* --- HALAMAN AKADEMIK & NILAI SISWA --- */
+	/* --- HALAMAN AKADEMIK & NILAI SISWA (DENGAN FILTER JENIS PENILAIAN & PAGINASI 10 DATA) --- */
 
-	/* --- HALAMAN AKADEMIK & NILAI SISWA --- */
+if (!window.academicsPaginationState) {
+    window.academicsPaginationState = {
+        currentPage: 1,
+        pageSize: 10
+    };
+}
 
-	window.renderAcademics = () => {
-            const content = document.getElementById('main-content');
-            if (!content) return;
+window.renderAcademics = () => {
+    const content = document.getElementById('main-content');
+    if (!content) return;
 
-            const isSiswa = window.currentUser.role === ROLES.SISWA;
-            const isGuru = window.currentUser.role === ROLES.GURU;
-            const isAdmin = window.currentUser.role === ROLES.ADMIN;
-            const canManage = isAdmin || isGuru;
+    const isSiswa = window.currentUser.role === ROLES.SISWA;
+    const isGuru = window.currentUser.role === ROLES.GURU;
+    const isAdmin = window.currentUser.role === ROLES.ADMIN;
+    const canManage = isAdmin || isGuru;
 
-            const allClasses = [...new Set((window.appState.students || []).map(s => s.class))].sort();
-            let teacherClasses = [];
-            let teacherSubjects = [];
+    const allClasses = [...new Set((window.appState.students || []).map(s => s.class))].sort();
+    let teacherClasses = [];
+    let teacherSubjects = [];
 
-            if (isGuru) {
-                teacherClasses = (window.currentUser.classes && window.currentUser.classes.length > 0)
-                    ? window.currentUser.classes.sort()
-                    : [];
-                teacherSubjects = (window.currentUser.subjects && window.currentUser.subjects.length > 0)
-                    ? window.currentUser.subjects
-                    : [];
-            } else if (isAdmin) {
-                teacherClasses = allClasses;
-            }
+    if (isGuru) {
+        teacherClasses = (window.currentUser.classes && window.currentUser.classes.length > 0)
+            ? window.currentUser.classes.sort()
+            : [];
+        teacherSubjects = (window.currentUser.subjects && window.currentUser.subjects.length > 0)
+            ? window.currentUser.subjects
+            : [];
+    } else if (isAdmin) {
+        teacherClasses = allClasses;
+    }
 
-            // Jika Guru belum diatur kelas pengampuannya
-            if (isGuru && teacherClasses.length === 0) {
-                content.innerHTML = `
-                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 text-center max-w-lg mx-auto my-12 slide-up">
-                        <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
-                            <i class="fas fa-exclamation-circle"></i>
+    // Jika Guru belum diatur kelas pengampuannya
+    if (isGuru && teacherClasses.length === 0) {
+        content.innerHTML = `
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 text-center max-w-lg mx-auto my-12 slide-up">
+                <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <h3 class="text-xl font-extrabold text-slate-800 mb-2">Kelas Pengampuan Belum Diatur</h3>
+                <p class="text-xs sm:text-sm text-slate-500 font-medium mb-6">
+                    Akun Anda belum memiliki daftar kelas pengampuan. Silakan hubungi Administrator untuk mengatur akses kelas dan mata pelajaran Anda.
+                </p>
+                <button onclick="window.navigate('dashboard')" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md">
+                    Kembali ke Dashboard
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    if (!window.acadClassFilter || (isGuru && !teacherClasses.includes(window.acadClassFilter) && window.acadClassFilter !== 'Semua')) {
+        window.acadClassFilter = isGuru ? teacherClasses[0] : 'Semua';
+    }
+
+    // Inisialisasi filter jenis penilaian jika belum ada
+    if (window.acadTypeFilter === undefined) {
+        window.acadTypeFilter = 'Semua';
+    }
+
+    const allowedStudents = window.getFilteredStudents();
+    const allowedNisns = allowedStudents.map(s => s.nisn);
+
+    let academics = window.appState.academics || [];
+
+    // Ambil daftar unik jenis evaluasi untuk dropdown filter
+    const allEvaluationTypes = [...new Set(academics.map(a => a.type || a.assessmentType || 'Tugas').filter(Boolean))].sort();
+    const defaultEvalTypes = ['Ulangan Harian', 'Tugas Harian', 'Praktikum', 'UTS / STS', 'UAS / SAS'];
+    const mergedEvalTypes = [...new Set([...defaultEvalTypes, ...allEvaluationTypes])].sort();
+
+    let filteredList = academics.filter(a => {
+        if (isSiswa) return a.nisn === window.currentUser.id;
+        if (isGuru) {
+            const isClassMatch = teacherClasses.includes(a.class) || allowedNisns.includes(a.nisn);
+            const isSubjectMatch = teacherSubjects.length > 0 ? teacherSubjects.includes(a.subject) : true;
+            return isClassMatch && isSubjectMatch;
+        }
+        return true;
+    });
+
+    if (window.activeStudentFilter) {
+        filteredList = filteredList.filter(a => a.nisn === window.activeStudentFilter);
+    }
+
+    if (window.acadClassFilter && window.acadClassFilter !== 'Semua') {
+        filteredList = filteredList.filter(a => a.class === window.acadClassFilter);
+    }
+
+    // Filter berdasarkan Jenis Penilaian
+    if (window.acadTypeFilter && window.acadTypeFilter !== 'Semua') {
+        filteredList = filteredList.filter(a => {
+            const itemType = a.type || a.assessmentType || 'Tugas Harian';
+            return itemType === window.acadTypeFilter;
+        });
+    }
+
+    if (window.acadSearchQuery) {
+        const q = window.acadSearchQuery.toLowerCase().trim();
+        filteredList = filteredList.filter(a => 
+            (a.studentName && a.studentName.toLowerCase().includes(q)) || 
+            (a.nisn && a.nisn.toLowerCase().includes(q))
+        );
+    }
+    
+    // Sort A-Z Siswa
+    filteredList = sortSiswaByName(filteredList);
+
+    // Proses Paginasi (Maksimal 10 Data per Halaman)
+    const pageSize = window.academicsPaginationState.pageSize;
+    const totalData = filteredList.length;
+    const totalPages = Math.ceil(totalData / pageSize) || 1;
+
+    if (window.academicsPaginationState.currentPage > totalPages) {
+        window.academicsPaginationState.currentPage = totalPages;
+    }
+    if (window.academicsPaginationState.currentPage < 1) {
+        window.academicsPaginationState.currentPage = 1;
+    }
+
+    const startIndex = (window.academicsPaginationState.currentPage - 1) * pageSize;
+    const paginatedList = filteredList.slice().reverse().slice(startIndex, startIndex + pageSize);
+
+    const availableOptions = isGuru ? teacherClasses : ['Semua', ...allClasses];
+    const classOptionsHtml = availableOptions.map(c => `
+        <option value="${c}" ${c === window.acadClassFilter ? 'selected' : ''}>${c === 'Semua' ? 'Semua Kelas' : 'Kelas ' + c}</option>
+    `).join('');
+
+    const typeOptionsHtml = ['Semua', ...mergedEvalTypes].map(t => `
+        <option value="${t}" ${t === window.acadTypeFilter ? 'selected' : ''}>${t === 'Semua' ? 'Semua Jenis' : t}</option>
+    `).join('');
+
+    let rowsHtml = paginatedList.map((a, idx) => {
+        const itemNumber = startIndex + idx + 1;
+        const itemType = a.type || a.assessmentType || '-';
+        return `
+            <tr class="hover:bg-slate-50/80 border-b border-slate-100 text-xs sm:text-sm">
+                <td class="p-4 font-bold text-slate-400 text-center">${itemNumber}</td>
+                <td class="p-4 font-bold text-slate-800">
+                    ${a.studentName || '-'} 
+                    <span class="text-[11px] text-slate-400 block font-normal">NISN: ${a.nisn}</span>
+                </td>
+                <td class="p-4 font-bold text-indigo-600">${a.class || '-'}</td>
+                <td class="p-4 text-slate-700 font-semibold">${a.subject || '-'}</td>
+                <td class="p-4">
+                    <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700">
+                        ${itemType}
+                    </span>
+                </td>
+                <td class="p-4 font-black text-center ${parseFloat(a.score) >= 75 ? 'text-emerald-600' : 'text-red-500'}">
+                    ${a.score}
+                </td>
+                <td class="p-4 text-slate-500 text-xs">${a.note || a.materi || '-'}</td>
+                <td class="p-4 text-center">
+                    ${canManage ? `
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick="window.openAcademicModal('${a.id}')" class="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg font-bold text-xs transition-all" title="Edit Nilai">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="window.confirmDelete('academics', '${a.id}', 'academics')" class="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-bold text-xs transition-all" title="Hapus Nilai">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
                         </div>
-                        <h3 class="text-xl font-extrabold text-slate-800 mb-2">Kelas Pengampuan Belum Diatur</h3>
-                        <p class="text-xs sm:text-sm text-slate-500 font-medium mb-6">
-                            Akun Anda belum memiliki daftar kelas pengampuan. Silakan hubungi Administrator untuk mengatur akses kelas dan mata pelajaran Anda.
-                        </p>
-                        <button onclick="window.navigate('dashboard')" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md">
-                            Kembali ke Dashboard
-                        </button>
-                    </div>
-                `;
-                return;
-            }
+                    ` : '-'}
+                </td>
+            </tr>
+        `;
+    }).join('');
 
-            if (!window.acadClassFilter || (isGuru && !teacherClasses.includes(window.acadClassFilter) && window.acadClassFilter !== 'Semua')) {
-                window.acadClassFilter = isGuru ? teacherClasses[0] : 'Semua';
-            }
+    if (!rowsHtml) {
+        rowsHtml = `<tr><td colspan="8" class="p-8 text-center text-slate-400 font-semibold">Belum ada data nilai akademik ditemukan sesuai filter.</td></tr>`;
+    }
 
-            const allowedStudents = window.getFilteredStudents();
-            const allowedNisns = allowedStudents.map(s => s.nisn);
+    content.innerHTML = `
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 slide-up">
+            <div>
+                <h2 class="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">Akademik & Nilai Siswa</h2>
+                <p class="text-xs sm:text-sm text-slate-500 font-medium">
+                    ${isGuru ? `Kelas Ampuan: <strong>${teacherClasses.join(', ')}</strong> \vert{} Mapel Ampuan: <strong>${teacherSubjects.join(', ') || 'Semua Mapel'}</strong>` : 'Kelola dan tinjau rekam nilai akademik siswa.'}
+                </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                ${canManage ? `
+                    <button onclick="window.startScanner('academics_add')" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
+                        <i class="fas fa-qrcode"></i> Scan QR
+                    </button>
+                    <button onclick="window.openBatchAcademicModal()" class="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-lg shadow-purple-600/30 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
+                        <i class="fas fa-users-cog"></i> Input Kolektif
+                    </button>
+                    <button onclick="window.openAcademicModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
+                        <i class="fas fa-plus"></i> Tambah Nilai
+                    </button>
+                ` : ''}
+            </div>
+        </div>
 
-            let academics = window.appState.academics || [];
-
-            let filteredList = academics.filter(a => {
-                if (isSiswa) return a.nisn === window.currentUser.id;
-                if (isGuru) {
-                    // Filter berdasarkan kelas ampuan
-                    const isClassMatch = teacherClasses.includes(a.class) || allowedNisns.includes(a.nisn);
-                    // Filter berdasarkan mapel ampuan (jika guru memiliki daftar mapel)
-                    const isSubjectMatch = teacherSubjects.length > 0 ? teacherSubjects.includes(a.subject) : true;
-                    return isClassMatch && isSubjectMatch;
-                }
-                return true;
-            });
-
-            if (window.activeStudentFilter) {
-                filteredList = filteredList.filter(a => a.nisn === window.activeStudentFilter);
-            }
-
-            if (window.acadClassFilter && window.acadClassFilter !== 'Semua') {
-                filteredList = filteredList.filter(a => a.class === window.acadClassFilter);
-            }
-
-            if (window.acadSearchQuery) {
-                const q = window.acadSearchQuery.toLowerCase().trim();
-                filteredList = filteredList.filter(a => 
-                    (a.studentName && a.studentName.toLowerCase().includes(q)) || 
-                    (a.nisn && a.nisn.toLowerCase().includes(q))
-                );
-            }
-            // === SISIPAN KODE SISWA A-Z AKADEMIK ===
-            filteredList = sortSiswaByName(filteredList);
-
-            const availableOptions = isGuru ? teacherClasses : ['Semua', ...allClasses];
-            const classOptionsHtml = availableOptions.map(c => `
-                <option value="${c}" ${c === window.acadClassFilter ? 'selected' : ''}>${c === 'Semua' ? 'Semua Kelas' : 'Kelas ' + c}</option>
-            `).join('');
-
-            let rowsHtml = filteredList.slice().reverse().map((a, idx) => `
-                <tr class="hover:bg-slate-50/80 border-b border-slate-100 text-xs sm:text-sm">
-                    <td class="p-4 font-bold text-slate-400 text-center">${idx + 1}</td>
-                    <td class="p-4 font-bold text-slate-800">
-                        ${a.studentName || '-'} 
-                        <span class="text-[11px] text-slate-400 block font-normal">NISN: ${a.nisn}</span>
-                    </td>
-                    <td class="p-4 font-bold text-indigo-600">${a.class || '-'}</td>
-                    <td class="p-4 text-slate-700 font-semibold">${a.subject || '-'}</td>
-                    <td class="p-4">
-                        <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700">
-                            ${a.type || '-'}
-                        </span>
-                    </td>
-                    <td class="p-4 font-black text-center ${parseFloat(a.score) >= 75 ? 'text-emerald-600' : 'text-red-500'}">
-                        ${a.score}
-                    </td>
-                    <td class="p-4 text-slate-500 text-xs">${a.note || a.materi || '-'}</td>
-                    <td class="p-4 text-center">
-                        ${canManage ? `
-                            <div class="flex items-center justify-center gap-2">
-                                <button onclick="window.openAcademicModal('${a.id}')" class="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg font-bold text-xs transition-all" title="Edit Nilai">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button onclick="window.confirmDelete('academics', '${a.id}', 'academics')" class="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-bold text-xs transition-all" title="Hapus Nilai">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </div>
-                        ` : '-'}
-                    </td>
-                </tr>
-            `).join('');
-
-            if (!rowsHtml) {
-                rowsHtml = `<tr><td colspan="8" class="p-8 text-center text-slate-400 font-semibold">Belum ada data nilai akademik ditemukan.</td></tr>`;
-            }
-
-            content.innerHTML = `
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 slide-up">
-                    <div>
-                        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">Akademik & Nilai Siswa</h2>
-                        <p class="text-xs sm:text-sm text-slate-500 font-medium">
-                            ${isGuru ? `Kelas Ampuan: <strong>${teacherClasses.join(', ')}</strong> \vert{} Mapel Ampuan: <strong>${teacherSubjects.join(', ') || 'Semua Mapel'}</strong>` : 'Kelola dan tinjau rekam nilai akademik siswa.'}
-                        </p>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
-                        ${!isSiswa ? `
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <input type="text" placeholder="Cari Nama / NISN..." value="${window.acadSearchQuery || ''}" oninput="window.acadSearchQuery = this.value; window.renderAcademics();" class="p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm w-36 sm:w-48">
-                                <span class="text-xs font-bold text-slate-500 whitespace-nowrap"><i class="fas fa-filter text-indigo-500"></i> Kelas:</span>
-                                <select onchange="window.acadClassFilter = this.value; window.renderAcademics();" class="p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm">
-                                    ${classOptionsHtml}
-                                </select>
-                            </div>
-                        ` : ''}
-                        ${canManage ? `
-                            <button onclick="window.startScanner('academics_add')" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
-                                <i class="fas fa-qrcode"></i> Scan QR
-                            </button>
-                            <button onclick="window.openBatchAcademicModal()" class="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-lg shadow-purple-600/30 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
-                                <i class="fas fa-users-cog"></i> Input Kolektif
-                            </button>
-                            <button onclick="window.openAcademicModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
-                                <i class="fas fa-plus"></i> Tambah Nilai
-                            </button>
-                        ` : ''}
-                    </div>
+        <!-- Filter & Search Bar -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-4 mb-6 slide-up flex flex-wrap gap-3 items-center justify-between">
+            <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                <!-- Search Nama / NISN -->
+                <div class="relative flex-1 sm:w-60">
+                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="text" placeholder="Cari Nama / NISN..." value="${window.acadSearchQuery || ''}" 
+                        oninput="window.acadSearchQuery = this.value; window.academicsPaginationState.currentPage = 1; window.renderAcademics();" 
+                        class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
                 </div>
 
-                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden slide-up" style="animation-delay: 0.1s;">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse min-w-[700px]">
-                            <thead>
-                                <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider text-[11px] font-extrabold border-b border-slate-100">
-                                    <th class="p-4 text-center w-12">No</th>
-                                    <th class="p-4">Siswa</th>
-                                    <th class="p-4">Kelas</th>
-                                    <th class="p-4">Mata Pelajaran</th>
-                                    <th class="p-4">Jenis Evaluasi</th>
-                                    <th class="p-4 text-center">Nilai</th>
-                                    <th class="p-4">Catatan</th>
-                                    <th class="p-4 text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>${rowsHtml}</tbody>
-                        </table>
-                    </div>
+                <!-- Filter Kelas -->
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-500 whitespace-nowrap"><i class="fas fa-filter text-indigo-500"></i> Kelas:</span>
+                    <select onchange="window.acadClassFilter = this.value; window.academicsPaginationState.currentPage = 1; window.renderAcademics();" class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
+                        ${classOptionsHtml}
+                    </select>
                 </div>
-            `;
-        };
+
+                <!-- Filter Jenis Penilaian -->
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-500 whitespace-nowrap"><i class="fas fa-tag text-indigo-500"></i> Jenis:</span>
+                    <select onchange="window.acadTypeFilter = this.value; window.academicsPaginationState.currentPage = 1; window.renderAcademics();" class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
+                        ${typeOptionsHtml}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabel Data -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden slide-up" style="animation-delay: 0.1s;">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse min-w-[700px]">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider text-[11px] font-extrabold border-b border-slate-100">
+                            <th class="p-4 text-center w-12">No</th>
+                            <th class="p-4">Siswa</th>
+                            <th class="p-4">Kelas</th>
+                            <th class="p-4">Mata Pelajaran</th>
+                            <th class="p-4">Jenis Evaluasi</th>
+                            <th class="p-4 text-center">Nilai</th>
+                            <th class="p-4">Catatan</th>
+                            <th class="p-4 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            </div>
+
+            <!-- Bagian Paginasi (Maksimal 10 Data per Halaman) -->
+            <div class="p-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3 bg-slate-50/50">
+                <div class="text-xs text-slate-500 font-medium">
+                    Menampilkan <span class="font-bold text-slate-700">${totalData > 0 ? startIndex + 1 : 0}</span> - <span class="font-bold text-slate-700">${Math.min(startIndex + pageSize, totalData)}</span> dari <span class="font-bold text-slate-700">${totalData}</span> data nilai
+                </div>
+                <div class="flex items-center gap-1">
+                    <button onclick="window.changeAcademicsPage(${window.academicsPaginationState.currentPage - 1})" 
+                        ${window.academicsPaginationState.currentPage === 1 ? 'disabled class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-300 text-xs font-bold cursor-not-allowed"' : 'class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold transition-all"'}>
+                        <i class="fas fa-chevron-left mr-1"></i> Prev
+                    </button>
+                    
+                    <span class="px-3 py-1.5 text-xs font-extrabold text-indigo-600 bg-indigo-50 rounded-lg">
+                        Halaman ${window.academicsPaginationState.currentPage} dari ${totalPages}
+                    </span>
+
+                    <button onclick="window.changeAcademicsPage(${window.academicsPaginationState.currentPage + 1})" 
+                        ${window.academicsPaginationState.currentPage >= totalPages ? 'disabled class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-300 text-xs font-bold cursor-not-allowed"' : 'class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold transition-all"'}>
+                        Next <i class="fas fa-chevron-right ml-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+// Helper Fungsi Pindah Halaman Paginasi Akademik
+window.changeAcademicsPage = (newPage) => {
+    if (newPage < 1) return;
+    window.academicsPaginationState.currentPage = newPage;
+    window.renderAcademics();
+};
 
 // Helper Menampilkan Riwayat Nilai Akademik Sebelumnya di Modal
 window.renderAcademicModalHistory = (nisn) => {
@@ -6501,6 +6633,1380 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
             const res = await window.saveDataToCloud('announcements', annObj);
             if(res) window.renderAnnouncements();
         };
+		
+        // =========================================================
+        // KODE TAMBAHAN: KEAMANAN CBT (FULLSCREEN & KAMERA PENGAWAS)
+        // =========================================================
+        window.cbtStream = null;
+
+        // Fungsi Mengaktifkan Kamera Depan
+        window.startCbtCamera = async function() {
+            try {
+                const videoElement = document.getElementById('cbt-monitor-video');
+                if (!videoElement) return;
+
+                // Meminta izin kamera depan (user facing)
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "user" }, 
+                    audio: false 
+                });
+                
+                window.cbtStream = stream;
+                videoElement.srcObject = stream;
+                window.showToast("Kamera pengawas aktif untuk memantau ujian.", "success");
+            } catch (err) {
+                console.error("Gagal mengakses kamera:", err);
+                window.showToast("Peringatan: Izin kamera ditolak. Pastikan kamera diizinkan agar terpantau.", "error");
+            }
+        };
+
+        // Fungsi Mematikan Kamera setelah ujian selesai
+        window.stopCbtCamera = function() {
+            if (window.cbtStream) {
+                window.cbtStream.getTracks().forEach(track => track.stop());
+                window.cbtStream = null;
+            }
+        };
+
+        // Fungsi Mengunci Layar (Fullscreen Mode)
+        window.enableCbtSecurity = function() {
+            // Masuk Fullscreen
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen().catch(err => console.log(err));
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            }
+
+            // Deteksi jika siswa mencoba keluar/pindah tab (Fullscreen Change)
+            document.addEventListener("fullscreenchange", window.handleCbtFullscreenExit);
+            document.addEventListener("visibilitychange", window.handleCbtVisibilityChange);
+        };
+
+        window.disableCbtSecurity = function() {
+            window.stopCbtCamera();
+            if (document.fullscreenElement) {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().catch(err => console.log(err));
+                }
+            }
+            document.removeEventListener("fullscreenchange", window.handleCbtFullscreenExit);
+            document.removeEventListener("visibilitychange", window.handleCbtVisibilityChange);
+        };
+
+        window.handleCbtFullscreenExit = function() {
+            if (!document.fullscreenElement) {
+                window.showToast("PENGINGAT: Anda keluar dari mode layar penuh! Harap tetap di halaman ujian.", "error");
+            }
+        };
+
+        window.handleCbtVisibilityChange = function() {
+            if (document.hidden) {
+                window.showToast("PERINGATAN: Anda terdeteksi berpindah aplikasi/tab browser!", "error");
+            }
+        };
+
+		// ==========================================================================
+        // MODUL CBT + DASHBOARD MONITORING UJIAN REAL-TIME + KAMERA & FULLSCREEN KEAMANAN
+        // ==========================================================================
+        window.cbtStream = null;
+
+        // 1. Fungsi Mengaktifkan Kamera Depan Siswa
+        window.startCbtCamera = async function() {
+            try {
+                const videoElement = document.getElementById('cbt-monitor-video');
+                if (!videoElement) return;
+
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "user" }, 
+                    audio: false 
+                });
+                
+                window.cbtStream = stream;
+                videoElement.srcObject = stream;
+                window.showToast("Kamera pengawas aktif untuk memantau ujian.", "success");
+            } catch (err) {
+                console.error("Gagal mengakses kamera:", err);
+                window.showToast("Peringatan: Izin kamera ditolak. Pastikan kamera diizinkan agar terpantau.", "error");
+            }
+        };
+
+        // 2. Fungsi Mematikan Kamera
+        window.stopCbtCamera = function() {
+            if (window.cbtStream) {
+                window.cbtStream.getTracks().forEach(track => track.stop());
+                window.cbtStream = null;
+            }
+        };
+
+        // 3. Fungsi Mengunci Layar (Fullscreen & Deteksi Pindah Tab)
+        window.enableCbtSecurity = function() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen().catch(err => console.log(err));
+            } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+            }
+
+            document.addEventListener("fullscreenchange", window.handleCbtFullscreenExit);
+            document.addEventListener("visibilitychange", window.handleCbtVisibilityChange);
+        };
+
+        window.disableCbtSecurity = function() {
+            window.stopCbtCamera();
+            if (document.fullscreenElement) {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().catch(err => console.log(err));
+                }
+            }
+            document.removeEventListener("fullscreenchange", window.handleCbtFullscreenExit);
+            document.removeEventListener("visibilitychange", window.handleCbtVisibilityChange);
+        };
+
+        window.handleCbtFullscreenExit = function() {
+            if (!document.fullscreenElement) {
+                window.showToast("PENGINGAT: Anda keluar dari mode layar penuh! Harap tetap di halaman ujian.", "error");
+            }
+        };
+
+        window.handleCbtVisibilityChange = function() {
+            if (document.hidden) {
+                window.showToast("PERINGATAN: Anda terdeteksi berpindah aplikasi/tab browser!", "error");
+            }
+        };
+
+        // 4. Tambahan Fungsi Saat Siswa Mulai Mengerjakan Ujian (Integrasi Keamanan)
+        const originalStartCbtExam = window.startCbtExam; // Simpan fungsi asli jika ada
+        window.startCbtExam = function(examId) {
+            // Aktifkan Keamanan & Kamera Pengawas saat ujian dimulai
+            window.enableCbtSecurity();
+            window.startCbtCamera();
+
+            // Jika ada fungsi asli penampil lembar soal, jalankan di sini
+            if (typeof originalStartCbtExam === 'function') {
+                originalStartCbtExam(examId);
+            } else {
+                // Fallback jika belum ada fungsi aslinya, tampilkan elemen video mengambang di layar ujian
+                const content = document.getElementById('main-content');
+                if (content && !document.getElementById('cbt-camera-box')) {
+                    const camDiv = document.createElement('div');
+                    camDiv.id = 'cbt-camera-box';
+                    camDiv.className = 'fixed top-20 right-4 z-[999] w-28 h-36 bg-black rounded-xl overflow-hidden border-2 border-indigo-500 shadow-2xl';
+                    camDiv.innerHTML = `
+                        <video id="cbt-monitor-video" autoplay playsinline muted class="w-full h-full object-cover"></video>
+                        <div class="absolute bottom-1 left-1 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded animate-pulse">
+                            ● DIPANTAU
+                        </div>
+                    `;
+                    content.prepend(camDiv);
+                }
+            }
+        };
+
+        // 5. Fungsi Utama renderCBT (Kombinasi Sempurna dengan Batasan Akses Asli Anda)
+        window.renderCBT = () => {
+            const content = document.getElementById('main-content');
+            if (!content) return;
+
+            const isSiswa = window.currentUser.role === ROLES.SISWA;
+            const isAdmin = window.currentUser.role === ROLES.ADMIN;
+            const isGuru = window.currentUser.role === ROLES.GURU;
+
+            if (!window.appState.cbtExams) window.appState.cbtExams = [];
+            if (!window.appState.cbtResults) window.appState.cbtResults = [];
+            if (!window.appState.activeCbtSessions) window.appState.activeCbtSessions = []; // Data siswa sedang ujian
+
+            const exams = window.appState.cbtExams;
+            const results = window.appState.cbtResults;
+
+            let examsHtml = exams.map((ex, idx) => {
+                const myResult = results.find(r => r.examId === ex.id && r.nisn === window.currentUser.id);
+                const isFinished = !!myResult;
+
+                let actionBtn = '';
+                if (isSiswa) {
+                    if (isFinished) {
+                        actionBtn = `<span class="px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-xl font-bold text-xs">Selesai (Nilai: ${myResult.score})</span>`;
+                    } else {
+                        actionBtn = `<button onclick="window.startCbtExam('${ex.id}')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md transition-all"><i class="fas fa-play mr-1"></i> Mulai Ujian</button>`;
+                        try {
+            // 1. Paksa Masuk Fullscreen (Harus dipicu dari klik tombol langsung)
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen().catch(err => console.log(err));
+            }
+
+            // 2. Aktifkan Kamera Depan
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+                .then(stream => {
+                    window.cbtStream = stream;
+                    const videoElement = document.getElementById('cbt-monitor-video');
+                    if (videoElement) videoElement.srcObject = stream;
+                })
+                .catch(err => {
+                    console.log("Kamera diblokir/tidak tersedia:", err);
+                    window.showToast("Catatan: Kamera tidak aktif (Pastikan menggunakan HTTPS/Localhost & izinkan kamera)", "error");
+                });
+
+            // 3. Deteksi Pindah Tab / Keluar Layar Penuh
+            document.addEventListener("visibilitychange", () => {
+                if (document.hidden) {
+                    alert("PERINGATAN: Anda terdeteksi keluar dari halaman ujian / pindah tab!");
+                }
+            });
+        } catch(e) {
+            console.log("Keamanan CBT:", e);
+        }
+                    }
+                } else {
+                    actionBtn = `
+                        <div class="flex items-center gap-2">
+                            <button onclick="window.openCbtResultModal('${ex.id}')" class="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl font-bold text-xs"><i class="fas fa-chart-bar mr-1"></i> Hasil</button>
+                            ${isAdmin || isGuru ? `
+                                <button onclick="window.openEditCbtExamModal('${ex.id}')" class="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-xl text-xs" title="Edit Ujian"><i class="fas fa-edit"></i></button>
+                                <button onclick="window.confirmDelete('cbtExams', '${ex.id}', 'cbt')" class="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-xs" title="Hapus Ujian"><i class="fas fa-trash-alt"></i></button>
+                            ` : ''}
+                        </div>
+                    `;
+                }
+
+                return `
+                    <tr class="hover:bg-slate-50 border-b border-slate-100 text-xs sm:text-sm">
+                        <td class="p-4 text-center font-bold text-slate-400">${idx + 1}</td>
+                        <td class="p-4 font-extrabold text-slate-800">${ex.title} <span class="block text-[11px] text-slate-400 font-medium">Mapel: ${ex.subject}</span></td>
+                        <td class="p-4 font-bold text-indigo-600">Kelas ${ex.class}</td>
+                        <td class="p-4 text-slate-600 font-medium">${ex.duration} Menit</td>
+                        <td class="p-4 text-slate-600 font-medium">${ex.questions.length} Soal</td>
+                        <td class="p-4 text-center">${actionBtn}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            if (!examsHtml) {
+                examsHtml = `<tr><td colspan="6" class="p-8 text-center text-slate-400 font-semibold">Belum ada ujian CBT yang tersedia saat ini.</td></tr>`;
+            }
+
+            // Render khusus bagian Monitoring Ujian (Hanya untuk Guru / Admin - Tetap dipertahankan)
+            let monitoringSectionHtml = '';
+            if (!isSiswa) {
+                const activeExamOptions = exams.map(e => `<option value="${e.id}">${e.title} - Kelas ${e.class}</option>`).join('');
+                
+                monitoringSectionHtml = `
+                    <!-- Dashboard Monitoring CBT Live -->
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 mb-8 slide-up">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-slate-100">
+                            <div>
+                                <h3 class="font-extrabold text-slate-800 text-base flex items-center gap-2">
+                                    <span class="relative flex h-3 w-3">
+                                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                      <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                                    </span>
+                                    Live Monitoring Ujian CBT
+                                </h3>
+                                <p class="text-xs text-slate-500 font-medium">Pantau siswa yang sedang mengerjakan ujian secara real-time.</p>
+                            </div>
+                            <div class="w-full sm:w-auto">
+                                <select id="monitor-exam-select" onchange="window.updateCbtMonitoringTable()" class="w-full sm:w-64 p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none focus:border-indigo-600">
+                                    <option value="">-- Pilih Ujian Yang Dipantau --</option>
+                                    ${activeExamOptions}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Ringkasan Status Live -->
+                        <div class="grid grid-cols-3 gap-3 mb-6">
+                            <div class="p-3.5 bg-amber-50 border border-amber-100 rounded-2xl text-center">
+                                <span class="block text-[10px] font-bold text-amber-500 uppercase">Sedang Ujian (Online)</span>
+                                <span class="text-lg font-black text-amber-700" id="stat-active-count">0 Siswa</span>
+                            </div>
+                            <div class="p-3.5 bg-emerald-50 border border-emerald-100 rounded-2xl text-center">
+                                <span class="block text-[10px] font-bold text-emerald-500 uppercase">Sudah Selesai</span>
+                                <span class="text-lg font-black text-emerald-700" id="stat-submitted-count">0 Siswa</span>
+                            </div>
+                            <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-center">
+                                <span class="block text-[10px] font-bold text-slate-400 uppercase">Total Peserta</span>
+                                <span class="text-lg font-black text-slate-700" id="stat-total-count">0 Siswa</span>
+                            </div>
+                        </div>
+
+                        <!-- Tabel Detail Siswa Online -->
+                        <div class="overflow-x-auto border border-slate-200 rounded-2xl">
+                            <table class="w-full text-left border-collapse min-w-[650px]">
+                                <thead>
+                                    <tr class="bg-slate-100 text-slate-600 uppercase tracking-wider text-[11px] font-extrabold border-b border-slate-200">
+                                        <th class="p-3 text-center w-12">No</th>
+                                        <th class="p-3">Nama Siswa / NISN</th>
+                                        <th class="p-3">Kelas</th>
+                                        <th class="p-3 text-center">Progres Soal</th>
+                                        <th class="p-3 text-center">Status Pengerjaan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cbt-monitor-tbody">
+                                    <tr><td colspan="5" class="p-6 text-center text-slate-400 font-semibold text-xs">Pilih ujian di atas untuk menampilkan status siswa secara live.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+
+            content.innerHTML = `
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 slide-up">
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">Ujian CBT (Computer Based Test)</h2>
+                        <p class="text-xs sm:text-sm text-slate-500 font-medium">Kelola ujian online, monitor pengerjaan live, dan analisis hasil.</p>
+                    </div>
+                    ${isAdmin || isGuru ? `
+                        <button onclick="window.openCbtExamModal()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md transition-all flex items-center gap-2">
+                            <i class="fas fa-plus"></i> Buat Ujian Baru
+                        </button>
+                    ` : ''}
+                </div>
+
+                ${monitoringSectionHtml}
+
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden slide-up">
+                    <div class="p-4 bg-slate-50 border-b border-slate-100 font-extrabold text-slate-700 text-xs uppercase">
+                        Daftar Ujian Terjadwal
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[700px]">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider text-[11px] font-extrabold border-b border-slate-100">
+                                    <th class="p-4 text-center w-12">No</th>
+                                    <th class="p-4">Judul Ujian</th>
+                                    <th class="p-4">Kelas</th>
+                                    <th class="p-4">Durasi</th>
+                                    <th class="p-4">Jumlah Soal</th>
+                                    <th class="p-4 text-center">Aksi / Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>${examsHtml}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        };
+
+        /* ==========================================================================
+           LOGIKA FUNGSI REFRESH MONITORING CBT
+           ========================================================================== */
+        window.updateCbtMonitoringTable = () => {
+            const selectEl = document.getElementById('monitor-exam-select');
+            if (!selectEl) return;
+
+            const examId = selectEl.value;
+            const tbody = document.getElementById('cbt-monitor-tbody');
+
+            if (!examId) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400 font-semibold text-xs">Pilih ujian di atas untuk menampilkan status siswa secara live.</td></tr>`;
+                document.getElementById('stat-active-count').innerText = '0 Siswa';
+                document.getElementById('stat-submitted-count').innerText = '0 Siswa';
+                document.getElementById('stat-total-count').innerText = '0 Siswa';
+                return;
+            }
+
+            const exam = (window.appState.cbtExams || []).find(e => e.id === examId);
+            const results = (window.appState.cbtResults || []).filter(r => r.examId === examId);
+            const activeSessions = (window.appState.activeCbtSessions || []).filter(s => s.examId === examId);
+
+            // Cari semua siswa di kelas target
+            const classStudents = (window.appState.students || []).filter(s => s.class === exam.class);
+
+            let activeCount = 0;
+            let submittedCount = 0;
+
+            let rowsHtml = classStudents.map((st, idx) => {
+                const submitted = results.find(r => r.nisn === st.id || r.studentName === st.name);
+                const active = activeSessions.find(s => s.studentId === st.id || s.studentName === st.name);
+
+                let statusBadge = '';
+                let progressText = '-';
+
+                if (submitted) {
+                    submittedCount++;
+                    statusBadge = `<span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg font-bold text-[10px]"><i class="fas fa-check-circle mr-1"></i> Selesai (Nilai: ${submitted.score})</span>`;
+                    progressText = `${exam.questions.length} / ${exam.questions.length} Soal`;
+                } else if (active) {
+                    activeCount++;
+                    statusBadge = `<span class="px-2.5 py-1 bg-amber-100 text-amber-800 rounded-lg font-bold text-[10px] animate-pulse"><i class="fas fa-spinner fa-spin mr-1"></i> Sedang Mengerjakan</span>`;
+                    progressText = `Soal #${active.currentQuestion + 1} dari ${exam.questions.length}`;
+                } else {
+                    statusBadge = `<span class="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg font-bold text-[10px]">Belum Mulai</span>`;
+                }
+
+                return `
+                    <tr class="border-b border-slate-100 text-xs hover:bg-slate-50">
+                        <td class="p-3 text-center font-bold text-slate-400">${idx + 1}</td>
+                        <td class="p-3 font-extrabold text-slate-800">${st.name} <span class="block text-[10px] text-slate-400 font-medium">NISN: ${st.id}</span></td>
+                        <td class="p-3 font-bold text-indigo-600">Kelas ${st.class}</td>
+                        <td class="p-3 text-center font-bold text-slate-700">${progressText}</td>
+                        <td class="p-3 text-center">${statusBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            if (!rowsHtml) {
+                rowsHtml = `<tr><td colspan="5" class="p-6 text-center text-slate-400 font-semibold text-xs">Tidak ada data siswa terdaftar di kelas ${exam.class}.</td></tr>`;
+            }
+
+            tbody.innerHTML = rowsHtml;
+            document.getElementById('stat-active-count').innerText = `${activeCount} Siswa`;
+            document.getElementById('stat-submitted-count').innerText = `${submittedCount} Siswa`;
+            document.getElementById('stat-total-count').innerText = `${classStudents.length} Siswa`;
+        };
+
+        window.openCbtExamModal = () => {
+            const isGuru = window.currentUser && window.currentUser.role === ROLES.GURU;
+            const teacherClasses = (isGuru && window.currentUser.classes && window.currentUser.classes.length > 0)
+                ? window.currentUser.classes 
+                : [...new Set((window.appState.students || []).map(s => s.class))].sort();
+
+            const teacherSubjects = (isGuru && window.currentUser.subjects && window.currentUser.subjects.length > 0)
+                ? window.currentUser.subjects 
+                : [];
+
+            const classOptionsHtml = teacherClasses.map(c => `<option value="${c}">Kelas ${c}</option>`).join('');
+            let subjectInputHtml = isGuru && teacherSubjects.length > 0
+                ? `<select id="cbt-subject" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none">${teacherSubjects.map(s => `<option value="${s}">${s}</option>`).join('')}</select>`
+                : `<input type="text" id="cbt-subject" placeholder="Contoh: Matematika" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none" required>`;
+
+            window.openModal(`
+                <div class="p-6 sm:p-8">
+                    <h3 class="text-xl font-extrabold text-slate-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-laptop-code text-indigo-600"></i> Buat Ujian CBT Multi-Jenis Soal
+                    </h3>
+                    <form onsubmit="window.saveCbtExam(event)" class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Judul Ujian</label>
+                                <input type="text" id="cbt-title" placeholder="Contoh: UTS Tematik" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs" required>
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Mata Pelajaran</label>
+                                ${subjectInputHtml}
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Target Kelas</label>
+                                <select id="cbt-class" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs" required>
+                                    ${classOptionsHtml}
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Durasi (Menit)</label>
+                            <input type="number" id="cbt-duration" value="60" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs" required>
+                        </div>
+
+                        <div id="cbt-questions-container" class="space-y-4 max-h-[45vh] overflow-y-auto p-2 border border-slate-200 rounded-xl">
+                            <!-- Template Soal Pertama (Default: Pilihan Ganda) -->
+                            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3 question-item" data-index="0">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs font-black text-indigo-600 q-label">Soal #1</span>
+                                    <select onchange="window.changeQuestionType(this)" class="p-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 q-type-select">
+                                        <option value="pg">Pilihan Ganda (Tunggal)</option>
+                                        <option value="kompleks">Pilihan Ganda Kompleks</option>
+                                        <option value="bs">Pernyataan Benar / Salah</option>
+                                    </select>
+                                </div>
+                                <input type="text" placeholder="Tuliskan pertanyaan..." class="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs q-text" required>
+                                
+                                <div class="question-options-area">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        <input type="text" placeholder="Pilihan A" class="p-2 bg-white border border-slate-200 rounded-lg text-xs q-opt-a" required>
+                                        <input type="text" placeholder="Pilihan B" class="p-2 bg-white border border-slate-200 rounded-lg text-xs q-opt-b" required>
+                                        <input type="text" placeholder="Pilihan C" class="p-2 bg-white border border-slate-200 rounded-lg text-xs q-opt-c" required>
+                                        <input type="text" placeholder="Pilihan D" class="p-2 bg-white border border-slate-200 rounded-lg text-xs q-opt-d" required>
+                                    </div>
+                                    <div class="mt-2">
+                                        <label class="text-[10px] font-bold text-slate-500 uppercase">Kunci Jawaban (Contoh: A atau A,C):</label>
+                                        <input type="text" placeholder="A" class="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs q-key" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" onclick="window.addCbtQuestionField()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-all w-full">
+                            <i class="fas fa-plus mr-1"></i> Tambah Soal
+                        </button>
+                        <div class="pt-4 flex justify-end gap-3 border-t border-slate-100">
+                            <button type="button" onclick="window.closeModal()" class="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs">Batal</button>
+                            <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md">Simpan Ujian</button>
+                        </div>
+                    </form>
+                </div>
+            `, 'max-w-3xl');
+        };
+
+        window.changeQuestionType = (selectEl) => {
+            const container = selectEl.closest('.question-item');
+            const type = selectEl.value;
+            const optArea = container.querySelector('.question-options-area');
+
+            if (type === 'pg' || type === 'kompleks') {
+                optArea.innerHTML = `
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <input type="text" placeholder="Pilihan A" class="p-2 bg-white border border-slate-200 rounded-lg text-xs q-opt-a" required>
+                        <input type="text" placeholder="Pilihan B" class="p-2 bg-white border border-slate-200 rounded-lg text-xs q-opt-b" required>
+                        <input type="text" placeholder="Pilihan C" class="p-2 bg-white border border-slate-200 rounded-lg text-xs q-opt-c" required>
+                        <input type="text" placeholder="Pilihan D" class="p-2 bg-white border border-slate-200 rounded-lg text-xs q-opt-d" required>
+                    </div>
+                    <div class="mt-2">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase">${type === 'kompleks' ? 'Kunci Jawaban (Pisahkan koma, cth: A,B)' : 'Kunci Jawaban (A/B/C/D)'}:</label>
+                        <input type="text" placeholder="${type === 'kompleks' ? 'A,C' : 'A'}" class="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs q-key" required>
+                    </div>
+                `;
+            } else if (type === 'bs') {
+                optArea.innerHTML = `
+                    <div class="space-y-2">
+                        <div class="flex gap-2 items-center">
+                            <input type="text" placeholder="Pernyataan 1 (cth: Matahari terbit dari timur)" class="flex-1 p-2 bg-white border border-slate-200 rounded-lg text-xs q-statement-1" required>
+                            <select class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold q-bs-1">
+                                <option value="B">Benar</option><option value="S">Salah</option>
+                            </select>
+                        </div>
+                        <div class="flex gap-2 items-center">
+                            <input type="text" placeholder="Pernyataan 2 (cth: Air berwujud padat di suhu 100°C)" class="flex-1 p-2 bg-white border border-slate-200 rounded-lg text-xs q-statement-2" required>
+                            <select class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold q-bs-2">
+                                <option value="B">Benar</option><option value="S">Salah</option>
+                            </select>
+                        </div>
+                    </div>
+                `;
+            }
+        };
+
+        window.addCbtQuestionField = () => {
+            const container = document.getElementById('cbt-questions-container');
+            const count = container.querySelectorAll('.question-item').length + 1;
+            const html = `
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3 question-item" data-index="${count - 1}">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-black text-indigo-600 q-label">Soal #${count}</span>
+                        <div class="flex items-center gap-2">
+                            <select onchange="window.changeQuestionType(this)" class="p-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 q-type-select">
+                                <option value="pg">Pilihan Ganda (Tunggal)</option>
+                                <option value="kompleks">Pilihan Ganda Kompleks</option>
+                                <option value="bs">Pernyataan Benar / Salah</option>
+                            </select>
+                            <button type="button" onclick="this.closest('.question-item').remove()" class="text-red-500 text-xs font-bold"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                    <input type="text" placeholder="Tuliskan pertanyaan..." class="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs q-text" required>
+                    <div class="question-options-area">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input type="text" placeholder="Pilihan A" class="p-2 bg-white border border-slate-200 rounded-lg text-xs q-opt-a" required>
+                            <input type="text" placeholder="Pilihan B" class="p-2 bg-white border border-slate-200 rounded-lg text-xs q-opt-b" required>
+                            <input type="text" placeholder="Pilihan C" class="p-2 bg-white border border-slate-200 rounded-lg text-xs q-opt-c" required>
+                            <input type="text" placeholder="Pilihan D" class="p-2 bg-white border border-slate-200 rounded-lg text-xs q-opt-d" required>
+                        </div>
+                        <div class="mt-2">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">Kunci Jawaban (A/B/C/D):</label>
+                            <input type="text" placeholder="A" class="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs q-key" required>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        };
+
+        window.saveCbtExam = async (e) => {
+            e.preventDefault();
+            const questions = [];
+            document.querySelectorAll('.question-item').forEach(item => {
+                const type = item.querySelector('.q-type-select').value;
+                const questionText = item.querySelector('.q-text').value;
+
+                if (type === 'bs') {
+                    questions.push({
+                        type: 'bs',
+                        question: questionText,
+                        statements: [
+                            { text: item.querySelector('.q-statement-1').value, key: item.querySelector('.q-bs-1').value },
+                            { text: item.querySelector('.q-statement-2').value, key: item.querySelector('.q-bs-2').value }
+                        ]
+                    });
+                } else {
+                    questions.push({
+                        type: type, // 'pg' atau 'kompleks'
+                        question: questionText,
+                        options: {
+                            A: item.querySelector('.q-opt-a').value,
+                            B: item.querySelector('.q-opt-b').value,
+                            C: item.querySelector('.q-opt-c').value,
+                            D: item.querySelector('.q-opt-d').value
+                        },
+                        key: item.querySelector('.q-key').value.trim().toUpperCase()
+                    });
+                }
+            });
+
+            const examObj = {
+                title: document.getElementById('cbt-title').value,
+                subject: document.getElementById('cbt-subject').value,
+                class: document.getElementById('cbt-class').value,
+                duration: parseInt(document.getElementById('cbt-duration').value) || 60,
+                questions: questions,
+                createdAt: new Date().toISOString()
+            };
+
+            window.closeModal();
+            const res = await window.saveDataToCloud('cbtExams', examObj);
+            if (res) {
+                window.showToast("Ujian CBT multi-jenis soal berhasil dibuat!", "success");
+                window.renderCBT();
+            }
+        };
+
+        /* ==========================================================================
+           FITUR EDIT UJIAN CBT
+           ========================================================================== */
+        window.openEditCbtExamModal = (examId) => {
+            const exam = (window.appState.cbtExams || []).find(e => e.id === examId);
+            if (!exam) return;
+
+            const isGuru = window.currentUser && window.currentUser.role === ROLES.GURU;
+            const teacherClasses = (isGuru && window.currentUser.classes && window.currentUser.classes.length > 0)
+                ? window.currentUser.classes 
+                : [...new Set((window.appState.students || []).map(s => s.class))].sort();
+
+            const teacherSubjects = (isGuru && window.currentUser.subjects && window.currentUser.subjects.length > 0)
+                ? window.currentUser.subjects 
+                : [];
+
+            const classOptionsHtml = teacherClasses.map(c => `<option value="${c}" ${exam.class === c ? 'selected' : ''}>Kelas ${c}</option>`).join('');
+            
+            let subjectInputHtml = '';
+            if (isGuru && teacherSubjects.length > 0) {
+                subjectInputHtml = `<select id="cbt-subject" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none">${teacherSubjects.map(s => `<option value="${s}" ${exam.subject === s ? 'selected' : ''}>${s}</option>`).join('')}</select>`;
+            } else {
+                subjectInputHtml = `<input type="text" id="cbt-subject" value="${exam.subject}" placeholder="Contoh: Matematika" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none" required>`;
+            }
+
+            let questionsHtml = exam.questions.map((q, idx) => {
+                const type = q.type || 'pg';
+                let optionsAreaHtml = '';
+
+                if (type === 'pg' || type === 'kompleks') {
+                    optionsAreaHtml = `
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input type="text" value="${q.options.A || ''}" placeholder="Pilihan A" class="p-2 bg-white border border-slate-200 rounded-lg text-xs q-opt-a" required>
+                            <input type="text" value="${q.options.B || ''}" placeholder="Pilihan B" class="p-2 bg-white border border-slate-200 rounded-lg text-xs q-opt-b" required>
+                            <input type="text" value="${q.options.C || ''}" placeholder="Pilihan C" class="p-2 bg-white border border-slate-200 rounded-lg text-xs q-opt-c" required>
+                            <input type="text" value="${q.options.D || ''}" placeholder="Pilihan D" class="p-2 bg-white border border-slate-200 rounded-lg text-xs q-opt-d" required>
+                        </div>
+                        <div class="mt-2">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">${type === 'kompleks' ? 'Kunci Jawaban (Cth: A,B)' : 'Kunci Jawaban (A/B/C/D)'}:</label>
+                            <input type="text" value="${q.key || ''}" placeholder="A" class="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs q-key" required>
+                        </div>
+                    `;
+                } else if (type === 'bs') {
+                    optionsAreaHtml = `
+                        <div class="space-y-2">
+                            <div class="flex gap-2 items-center">
+                                <input type="text" value="${q.statements[0]?.text || ''}" placeholder="Pernyataan 1" class="flex-1 p-2 bg-white border border-slate-200 rounded-lg text-xs q-statement-1" required>
+                                <select class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold q-bs-1">
+                                    <option value="B" ${q.statements[0]?.key === 'B' ? 'selected' : ''}>Benar</option>
+                                    <option value="S" ${q.statements[0]?.key === 'S' ? 'selected' : ''}>Salah</option>
+                                </select>
+                            </div>
+                            <div class="flex gap-2 items-center">
+                                <input type="text" value="${q.statements[1]?.text || ''}" placeholder="Pernyataan 2" class="flex-1 p-2 bg-white border border-slate-200 rounded-lg text-xs q-statement-2" required>
+                                <select class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold q-bs-2">
+                                    <option value="B" ${q.statements[1]?.key === 'B' ? 'selected' : ''}>Benar</option>
+                                    <option value="S" ${q.statements[1]?.key === 'S' ? 'selected' : ''}>Salah</option>
+                                </select>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3 question-item" data-index="${idx}">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-black text-indigo-600 q-label">Soal #${idx + 1}</span>
+                            <div class="flex items-center gap-2">
+                                <select onchange="window.changeQuestionType(this)" class="p-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 q-type-select">
+                                    <option value="pg" ${type === 'pg' ? 'selected' : ''}>Pilihan Ganda (Tunggal)</option>
+                                    <option value="kompleks" ${type === 'kompleks' ? 'selected' : ''}>Pilihan Ganda Kompleks</option>
+                                    <option value="bs" ${type === 'bs' ? 'selected' : ''}>Pernyataan Benar / Salah</option>
+                                </select>
+                                <button type="button" onclick="this.closest('.question-item').remove()" class="text-red-500 text-xs font-bold"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <input type="text" value="${q.question}" placeholder="Tuliskan pertanyaan..." class="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs q-text" required>
+                        <div class="question-options-area">
+                            ${optionsAreaHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            window.openModal(`
+                <div class="p-6 sm:p-8">
+                    <h3 class="text-xl font-extrabold text-slate-800 mb-4 flex items-center gap-2">
+                        <i class="fas fa-edit text-indigo-600"></i> Edit Ujian CBT
+                    </h3>
+                    <form onsubmit="window.updateCbtExam(event, '${exam.id}')" class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Judul Ujian</label>
+                                <input type="text" id="cbt-title" value="${exam.title}" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs" required>
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Mata Pelajaran</label>
+                                ${subjectInputHtml}
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Target Kelas</label>
+                                <select id="cbt-class" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs" required>
+                                    ${classOptionsHtml}
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Durasi (Menit)</label>
+                            <input type="number" id="cbt-duration" value="${exam.duration}" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs" required>
+                        </div>
+
+                        <div id="cbt-questions-container" class="space-y-4 max-h-[45vh] overflow-y-auto p-2 border border-slate-200 rounded-xl">
+                            ${questionsHtml}
+                        </div>
+
+                        <button type="button" onclick="window.addCbtQuestionField()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-all w-full">
+                            <i class="fas fa-plus mr-1"></i> Tambah Soal
+                        </button>
+                        <div class="pt-4 flex justify-end gap-3 border-t border-slate-100">
+                            <button type="button" onclick="window.closeModal()" class="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs">Batal</button>
+                            <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md">Simpan Perubahan</button>
+                        </div>
+                    </form>
+                </div>
+            `, 'max-w-3xl');
+        };
+
+        window.updateCbtExam = async (e, examId) => {
+            e.preventDefault();
+            const questions = [];
+            document.querySelectorAll('.question-item').forEach(item => {
+                const type = item.querySelector('.q-type-select').value;
+                const questionText = item.querySelector('.q-text').value;
+
+                if (type === 'bs') {
+                    questions.push({
+                        type: 'bs',
+                        question: questionText,
+                        statements: [
+                            { text: item.querySelector('.q-statement-1').value, key: item.querySelector('.q-bs-1').value },
+                            { text: item.querySelector('.q-statement-2').value, key: item.querySelector('.q-bs-2').value }
+                        ]
+                    });
+                } else {
+                    questions.push({
+                        type: type,
+                        question: questionText,
+                        options: {
+                            A: item.querySelector('.q-opt-a').value,
+                            B: item.querySelector('.q-opt-b').value,
+                            C: item.querySelector('.q-opt-c').value,
+                            D: item.querySelector('.q-opt-d').value
+                        },
+                        key: item.querySelector('.q-key').value.trim().toUpperCase()
+                    });
+                }
+            });
+
+            // Cari index ujian yang akan di-update di appState
+            const examIndex = (window.appState.cbtExams || []).findIndex(ex => ex.id === examId);
+            if (examIndex !== -1) {
+                window.appState.cbtExams[examIndex] = {
+                    ...window.appState.cbtExams[examIndex],
+                    title: document.getElementById('cbt-title').value,
+                    subject: document.getElementById('cbt-subject').value,
+                    class: document.getElementById('cbt-class').value,
+                    duration: parseInt(document.getElementById('cbt-duration').value) || 60,
+                    questions: questions,
+                    updatedAt: new Date().toISOString()
+                };
+            }
+
+            window.closeModal();
+            
+            // Simpan menggunakan fungsi cloud bawaan aplikasi Anda
+            const res = await window.saveDataToCloud('cbtExams', window.appState.cbtExams[examIndex]);
+            if (res) {
+                window.showToast("Ujian CBT berhasil diperbarui!", "success");
+                window.renderCBT();
+            }
+        };
+
+        window.startCbtExam = (examId) => {
+            const exam = window.appState.cbtExams.find(e => e.id === examId);
+            if (!exam) return;
+
+            let currentQIdx = 0;
+            const answers = {}; // Menyimpan jawaban siswa
+
+            const renderQuestion = () => {
+                const q = exam.questions[currentQIdx];
+                const content = document.getElementById('main-content');
+                
+                let answerInputHtml = '';
+
+                if (q.type === 'pg') {
+                    answerInputHtml = `
+                        <div class="space-y-3">
+                            ${['A', 'B', 'C', 'D'].map(opt => `
+                                <label class="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 hover:border-indigo-600 cursor-pointer transition-all ${(answers[currentQIdx] === opt) ? 'bg-indigo-50 border-indigo-600' : 'bg-slate-50'}">
+                                    <input type="radio" name="exam_opt" value="${opt}" ${(answers[currentQIdx] === opt) ? 'checked' : ''} onchange="window.setExamAnswer(${currentQIdx}, '${opt}', 'pg')" class="w-4 h-4 text-indigo-600">
+                                    <span class="text-xs sm:text-sm font-semibold text-slate-700"><strong>${opt}.</strong>${q.options[opt]}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    `;
+                } else if (q.type === 'kompleks') {
+                    const currentSelected = answers[currentQIdx] || [];
+                    answerInputHtml = `
+                        <p class="text-[11px] text-indigo-600 font-bold mb-2"><i class="fas.fa-info-circle"></i> Pilihan Ganda Kompleks: Anda dapat memilih lebih dari satu jawaban benar.</p>
+                        <div class="space-y-3">
+                            ${['A', 'B', 'C', 'D'].map(opt => `
+                                <label class="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 hover:border-indigo-600 cursor-pointer transition-all ${currentSelected.includes(opt) ? 'bg-indigo-50 border-indigo-600' : 'bg-slate-50'}">
+                                    <input type="checkbox" value="${opt}" ${currentSelected.includes(opt) ? 'checked' : ''} onchange="window.setComplexAnswer(${currentQIdx}, '${opt}', this.checked)" class="w-4 h-4 rounded text-indigo-600">
+                                    <span class="text-xs sm:text-sm font-semibold text-slate-700"><strong>${opt}.</strong>${q.options[opt]}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    `;
+                } else if (q.type === 'bs') {
+                    const currentBs = answers[currentQIdx] || {};
+                    answerInputHtml = `
+                        <div class="space-y-3">
+                            ${q.statements.map((st, stIdx) => `
+                                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                    <span class="text-xs font-semibold text-slate-700">${stIdx + 1}.${st.text}</span>
+                                    <div class="flex gap-2">
+                                        <label class="px-3 py-1 rounded-lg text-xs font-bold cursor-pointer border ${currentBs[stIdx] === 'B' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200'}">
+                                            <input type="radio" name="bs_${stIdx}" value="B" ${currentBs[stIdx] === 'B' ? 'checked' : ''} onchange="window.setBsAnswer(${currentQIdx},${stIdx}, 'B')" class="hidden"> Benar
+                                        </label>
+                                        <label class="px-3 py-1 rounded-lg text-xs font-bold cursor-pointer border ${currentBs[stIdx] === 'S' ? 'bg-red-600 text-white border-red-600' : 'bg-white text-slate-600 border-slate-200'}">
+                                            <input type="radio" name="bs_${stIdx}" value="S" ${currentBs[stIdx] === 'S' ? 'checked' : ''} onchange="window.setBsAnswer(${currentQIdx},${stIdx}, 'S')" class="hidden"> Salah
+                                        </label>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                content.innerHTML = `
+                    <div class="max-w-2xl mx-auto bg-white p-6 sm:p-8 rounded-3xl shadow-xl border border-slate-200 slide-up">
+                        <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+                            <div>
+                                <h3 class="font-extrabold text-slate-800 text-lg">${exam.title}</h3>
+                                <p class="text-xs text-slate-500 font-medium">Soal No. ${currentQIdx + 1} dari ${exam.questions.length} (${q.type.toUpperCase()})</p>
+                            </div>
+                            <span class="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-xl text-xs border border-indigo-100">
+                                <i class="far fa-clock mr-1"></i> ${exam.duration} Menit
+                            </span>
+                        </div>
+
+                        <div class="mb-6">
+                            <p class="text-sm font-bold text-slate-800 mb-4 leading-relaxed">${q.question}</p>
+                            ${answerInputHtml}
+                        </div>
+
+                        <div class="flex justify-between items-center pt-4 border-t border-slate-100">
+                            <button onclick="window.prevExamQ(${currentQIdx})" ${currentQIdx === 0 ? 'disabled' : ''} class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs disabled:opacity-50">Sebelumnya</button>
+                            ${currentQIdx < exam.questions.length - 1 ? 
+                                `<button onclick="window.nextExamQ(${currentQIdx},${exam.questions.length})" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md">Selanjutnya</button>` :
+                                `<button onclick="window.submitCbtExam('${exam.id}')" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md"><i class="fas fa-check mr-1"></i> Selesaikan Ujian</button>`
+                            }
+                        </div>
+                    </div>
+                `;
+            };
+
+            window.setExamAnswer = (qIdx, opt) => { answers[qIdx] = opt; };
+            window.setComplexAnswer = (qIdx, opt, isChecked) => {
+                if (!answers[qIdx]) answers[qIdx] = [];
+                if (isChecked) {
+                    if (!answers[qIdx].includes(opt)) answers[qIdx].push(opt);
+                } else {
+                    answers[qIdx] = answers[qIdx].filter(item => item !== opt);
+                }
+                answers[qIdx].sort();
+            };
+            window.setBsAnswer = (qIdx, stIdx, val) => {
+                if (!answers[qIdx]) answers[qIdx] = {};
+                answers[qIdx][stIdx] = val;
+                renderQuestion(); // re-render untuk memperbarui highlight warna tombol benar/salah
+            };
+
+            window.prevExamQ = (idx) => { currentQIdx = idx - 1; renderQuestion(); };
+            window.nextExamQ = (idx, total) => { if (currentQIdx < total - 1) { currentQIdx = idx + 1; renderQuestion(); } };
+            
+            window.submitCbtExam = async (eId) => {
+                let earnedPoints = 0;
+                let totalPoints = exam.questions.length;
+
+                exam.questions.forEach((q, idx) => {
+                    const studentAns = answers[idx];
+                    if (!studentAns) return;
+
+                    if (q.type === 'pg') {
+                        if (studentAns === q.key) earnedPoints += 1;
+                    } else if (q.type === 'kompleks') {
+                        const correctKeys = q.key.split(',').map(s => s.trim()).sort();
+                        if (JSON.stringify(studentAns) === JSON.stringify(correctKeys)) {
+                            earnedPoints += 1;
+                        }
+                    } else if (q.type === 'bs') {
+                        let allCorrect = true;
+                        q.statements.forEach((st, stIdx) => {
+                            if (studentAns[stIdx] !== st.key) allCorrect = false;
+                        });
+                        if (allCorrect) earnedPoints += 1;
+                    }
+                });
+
+                const score = Math.round((earnedPoints / totalPoints) * 100);
+                const resultObj = {
+                    examId: eId,
+                    nisn: window.currentUser.id,
+                    studentName: window.currentUser.name,
+                    score: score,
+                    submittedAt: new Date().toISOString()
+                };
+
+                const res = await window.saveDataToCloud('cbtResults', resultObj);
+                if (res) {
+                    window.showToast(`Ujian selesai! Nilai Anda: ${score}`, "success");
+                    window.renderCBT();
+                }
+            };
+
+            renderQuestion();
+        };
+        
+        window.openCbtResultModal = (examId) => {
+            const exam = window.appState.cbtExams.find(e => e.id === examId);
+            const results = (window.appState.cbtResults || []).filter(r => r.examId === examId);
+
+            const totalSubmitted = results.length;
+            let avgScore = 0;
+            let highestScore = 0;
+            let lowestScore = totalSubmitted > 0 ? 100 : 0;
+            let passedCount = 0;
+
+            if (totalSubmitted > 0) {
+                const scores = results.map(r => r.score);
+                const sum = scores.reduce((a, b) => a + b, 0);
+                avgScore = Math.round(sum / totalSubmitted);
+                highestScore = Math.max(...scores);
+                lowestScore = Math.min(...scores);
+                passedCount = scores.filter(s => s >= 75).length;
+            }
+
+            const passPercentage = totalSubmitted > 0 ? Math.round((passedCount / totalSubmitted) * 100) : 0;
+
+            let questionAnalysisHtml = '';
+            if (exam && exam.questions && exam.questions.length > 0) {
+                questionAnalysisHtml = exam.questions.map((q, qIdx) => {
+                    const type = q.type || 'pg';
+                    let detailHtml = '';
+
+                    if (type === 'bs') {
+                        const statementsList = (q.statements || []).map((st, sIdx) => `
+                            <div class="text-[11px] text-slate-600 pl-2 border-l-2 border-indigo-300 mt-1">
+                                ${sIdx + 1}. ${st.text} <span class="font-bold text-indigo-600">(Kunci: ${st.key === 'B' ? 'Benar' : 'Salah'})</span>
+                            </div>
+                        `).join('');
+
+                        detailHtml = `
+                            <div class="mt-1">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase">Pernyataan Benar/Salah:</span>
+                                ${statementsList}
+                            </div>
+                        `;
+                    } else {
+                        const opts = q.options || {};
+                        detailHtml = `
+                            <div class="text-[11px] text-slate-500 grid grid-cols-2 sm:grid-cols-4 gap-1 pt-1">
+                                <div>A. ${opts.A || '-'}</div>
+                                <div>B. ${opts.B || '-'}</div>
+                                <div>C. ${opts.C || '-'}</div>
+                                <div>D. ${opts.D || '-'}</div>
+                            </div>
+                        `;
+                    }
+
+                    return `
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-1">
+                            <div class="font-bold text-slate-800 flex justify-between items-start gap-2">
+                                <span>Soal #${qIdx + 1} (${type.toUpperCase()}): ${q.question}</span>
+                                ${type !== 'bs' ? `<span class="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md whitespace-nowrap">Kunci: ${q.key || '-'}</span>` : ''}
+                            </div>
+                            ${detailHtml}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            let rows = results.map((r, idx) => `
+                <tr class="border-b border-slate-100 text-xs">
+                    <td class="p-3 text-center font-bold text-slate-400">${idx + 1}</td>
+                    <td class="p-3 font-bold text-slate-800">${r.studentName} <span class="text-[10px] text-slate-400 block">NISN: ${r.nisn}</span></td>
+                    <td class="p-3 text-center font-black ${r.score >= 75 ? 'text-emerald-600' : 'text-red-500'} text-base">${r.score}</td>
+                    <td class="p-3 text-center text-slate-500">${r.score >= 75 ? '<span class="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg font-bold text-[10px]">Tuntas</span>' : '<span class="px-2 py-1 bg-red-50 text-red-700 rounded-lg font-bold text-[10px]">Remedial</span>'}</td>
+                </tr>
+            `).join('');
+
+            if (!rows) rows = `<tr><td colspan="4" class="p-6 text-center text-slate-400">Belum ada siswa yang mengerjakan ujian ini.</td></tr>`;
+
+            window.openModal(`
+                <div class="p-6 sm:p-8 space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 pb-4">
+                        <div>
+                            <h3 class="text-xl font-extrabold text-slate-800">Analisis & Analitik: ${exam ? exam.title : ''}</h3>
+                            <p class="text-xs text-slate-500 font-medium">Mata Pelajaran: ${exam ? exam.subject : '-'} | Kelas: ${exam ? exam.class : '-'}</p>
+                        </div>
+                        <span class="px-3 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-xl text-xs">Total Peserta: ${totalSubmitted} Siswa</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div class="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl text-center">
+                            <span class="block text-[10px] font-bold text-indigo-400 uppercase">Rata-Rata Kelas</span>
+                            <span class="text-xl font-black text-indigo-700">${avgScore}</span>
+                        </div>
+                        <div class="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl text-center">
+                            <span class="block text-[10px] font-bold text-emerald-400 uppercase">Nilai Tertinggi</span>
+                            <span class="text-xl font-black text-emerald-700">${highestScore}</span>
+                        </div>
+                        <div class="p-4 bg-amber-50 border border-amber-100 rounded-2xl text-center">
+                            <span class="block text-[10px] font-bold text-amber-400 uppercase">Nilai Terendah</span>
+                            <span class="text-xl font-black text-amber-700">${lowestScore}</span>
+                        </div>
+                        <div class="p-4 bg-blue-50 border border-blue-100 rounded-2xl text-center">
+                            <span class="block text-[10px] font-bold text-blue-400 uppercase">Tingkat Kelulusan</span>
+                            <span class="text-xl font-black text-blue-700">${passPercentage}%</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="text-xs font-extrabold text-slate-700 uppercase mb-2">Daftar Nilai Siswa</h4>
+                        <div class="max-h-[35vh] overflow-y-auto border border-slate-200 rounded-xl">
+                            <table class="w-full text-left border-collapse">
+                               <thead>
+                                    <tr class="bg-slate-100 text-slate-600 uppercase text-[10px] font-bold sticky top-0">
+                                        <th class="p-3 text-center w-12">No</th>
+                                        <th class="p-3">Nama Siswa</th>
+                                        <th class="p-3 text-center">Nilai</th>
+                                        <th class="p-3 text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="text-xs font-extrabold text-slate-700 uppercase mb-2">Tinjauan Butir Soal Ujian</h4>
+                        <div class="max-h-[30vh] overflow-y-auto space-y-2 p-1">
+                            ${questionAnalysisHtml}
+                        </div>
+                    </div>
+                </div>
+            `, 'max-w-3xl');
+        };
+		
+        /* ==========================================================================
+           MODUL ABSENSI MENGAJAR GURU (MURNI CLOUD STORAGE) + FILTER & DOWNLOAD WORD
+           ========================================================================== */
+        // =========================================================
+// FITUR & RENDER HALAMAN ABSEN MENGAJAR GURU (TEACHER ATTENDANCE)
+// =========================================================
+// Variabel Global Filter Absensi Mengajar
+window.teacherAttNameFilter = window.teacherAttNameFilter || 'Semua';
+window.teacherAttDateFilter = window.teacherAttDateFilter || '';
+window.teacherAttMonthFilter = window.teacherAttMonthFilter || '';
+
+window.renderTeacherAttendance = function() {
+    const content = document.getElementById('main-content');
+    if (!content) return;
+
+    const daysIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const now = new Date();
+    const todayDayName = daysIndo[now.getDay()]; // contoh: "Senin"
+    const todayDateStr = getLocalDateString(now); // YYYY-MM-DD
+
+    const isGuru = window.currentUser && window.currentUser.role === ROLES.GURU;
+    const isAdmin = window.currentUser && window.currentUser.role === ROLES.ADMIN;
+    const currentUserName = (window.currentUser ? window.currentUser.name : '').toLowerCase().trim();
+
+    const schedules = window.appState.schedules || [];
+    const teacherAtt = window.appState.teacherAttendance || [];
+
+    // Ambil daftar unik nama guru untuk opsi filter Admin
+    const allTeacherNames = [...new Set(teacherAtt.map(a => a.teacherName || a.namaGuru).filter(Boolean))].sort();
+
+    // Filter jadwal hari ini khusus untuk guru yang sedang login (atau seluruhnya jika Admin)
+    let myTodaySchedules = schedules.filter(s => {
+        const isToday = s.day === todayDayName;
+        if (!isToday) return false;
+
+        if (isAdmin) return true;
+
+        if (isGuru) {
+            const schTeacher = (s.teacher || '').toLowerCase().trim();
+            return schTeacher.includes(currentUserName) || currentUserName.includes(schTeacher);
+        }
+        return false;
+    });
+
+    // Urutkan jadwal berdasarkan jam
+    myTodaySchedules.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+
+    // Jika Admin menggunakan filter tambahan pada riwayat/tampilan
+    if (isAdmin && window.teacherAttNameFilter && window.teacherAttNameFilter !== 'Semua') {
+        myTodaySchedules = myTodaySchedules.filter(s => {
+            const schTeacher = (s.teacher || '').toLowerCase().trim();
+            return schTeacher.includes(window.teacherAttNameFilter.toLowerCase().trim());
+        });
+    }
+
+    let teacherOptionsHtml = `<option value="Semua" ${window.teacherAttNameFilter === 'Semua' ? 'selected' : ''}>Semua Guru</option>`;
+    teacherOptionsHtml += allTeacherNames.map(name => `
+        <option value="${name}" ${name === window.teacherAttNameFilter ? 'selected' : ''}>${name}</option>
+    `).join('');
+
+    let rowsHtml = myTodaySchedules.map((s, idx) => {
+        // Cek apakah sudah absen mengajar pada jadwal ini hari ini
+        const existingAtt = teacherAtt.find(a => 
+            a.scheduleId === s.id && 
+            a.date === todayDateStr
+        );
+
+        let statusBadge = `<span class="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold">Belum Absen</span>`;
+        let actionBtn = `
+            <button onclick="window.processTeacherAttendance('${s.id}', '${s.subject}', '${s.class}', 'Hadir')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center gap-1.5 mx-auto">
+                <i class="fas fa-check-circle"></i> Absen Mengajar
+            </button>
+        `;
+
+        if (existingAtt) {
+            statusBadge = `<span class="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-xs font-black"><i class="fas fa-check mr-1"></i> Telah Mengajar (${existingAtt.time || '-'})</span>`;
+            actionBtn = `<span class="text-xs text-emerald-600 font-bold"><i class="fas fa-check-double mr-1"></i> Selesai</span>`;
+        }
+
+        return `
+            <tr class="hover:bg-slate-50 border-b border-slate-100 text-xs sm:text-sm">
+                <td class="p-4 text-center font-bold text-slate-400">${idx + 1}</td>
+                <td class="p-4 font-extrabold text-slate-800">
+                    ${s.subject} 
+                    <span class="block text-[11px] text-indigo-600 font-bold">Kelas ${s.class} &bull; ${s.teacher || '-'}</span>
+                </td>
+                <td class="p-4 font-bold text-slate-700 text-center bg-slate-50/50 rounded-xl">${s.time || '-'} WIB</td>
+                <td class="p-4 text-center">${statusBadge}</td>
+                <td class="p-4 text-center">${actionBtn}</td>
+            </tr>
+        `;
+    }).join('');
+
+    if (!myTodaySchedules.length) {
+        rowsHtml = `
+            <tr>
+                <td colspan="5" class="p-8 text-center text-slate-400 font-semibold">
+                    <i class="fas fa-calendar-times text-3xl mb-2 text-slate-300 block"></i>
+                    Tidak ada jadwal mengajar yang tersimpan di cloud untuk saat ini (${todayDayName}).
+                </td>
+            </tr>
+        `;
+    }
+
+    content.innerHTML = `
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 slide-up">
+            <div>
+                <h2 class="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">Absen Mengajar Guru</h2>
+                <p class="text-xs sm:text-sm text-slate-500 font-medium">Presensi kehadiran mengajar sesuai jadwal pelajaran hari ini.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                <button onclick="window.downloadTeacherAttendanceWord()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md transition-all flex items-center gap-2">
+                    <i class="fas fa-file-word"></i> Unduh Word (.doc)
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter Bar: Nama Guru, Tanggal, dan Bulan -->
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mb-6 flex flex-wrap items-center gap-4 slide-up">
+            ${isAdmin ? `
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-500"><i class="fas fa-filter text-indigo-500"></i> Guru:</span>
+                    <select onchange="window.teacherAttNameFilter = this.value; window.renderTeacherAttendance();" class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
+                        ${teacherOptionsHtml}
+                    </select>
+                </div>
+            ` : ''}
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-500"><i class="fas fa-calendar-alt text-indigo-500"></i> Tanggal:</span>
+                <input type="date" value="${window.teacherAttDateFilter || ''}" onchange="window.teacherAttDateFilter = this.value; window.teacherAttMonthFilter = ''; window.renderTeacherAttendance();" class="p-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
+                ${window.teacherAttDateFilter ? `<button onclick="window.teacherAttDateFilter = ''; window.renderTeacherAttendance();" class="text-xs text-red-500 font-bold hover:underline ml-1">Reset</button>` : ''}
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-500"><i class="fas fa-calendar-week text-indigo-500"></i> Bulan:</span>
+                <input type="month" value="${window.teacherAttMonthFilter || ''}" onchange="window.teacherAttMonthFilter = this.value; window.teacherAttDateFilter = ''; window.renderTeacherAttendance();" class="p-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
+                ${window.teacherAttMonthFilter ? `<button onclick="window.teacherAttMonthFilter = ''; window.renderTeacherAttendance();" class="text-xs text-red-500 font-bold hover:underline ml-1">Reset</button>` : ''}
+            </div>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden slide-up">
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-white">
+                <h3 class="font-extrabold text-slate-800 flex items-center gap-2">
+                    <i class="fas fa-user-clock text-indigo-600"></i> Jadwal & Absen Hari Ini
+                </h3>
+                <span class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">${todayDayName}, ${todayDateStr}</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse min-w-[650px]">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider text-[11px] font-extrabold border-b border-slate-100">
+                            <th class="p-4 text-center w-12">No</th>
+                            <th class="p-4">Nama Guru & Mapel</th>
+                            <th class="p-4 text-center">Jam Jadwal</th>
+                            <th class="p-4 text-center">Status Kehadiran</th>
+                            <th class="p-4 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            </div>
+        </div>
+    `;
+};
+
+// Helper untuk Memproses Absensi Mengajar
+window.processTeacherAttendance = async function(scheduleId, subject, targetClass, status) {
+    if (!window.currentUser) return;
+
+    const now = new Date();
+    const jakartaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+    const dateStr = getLocalDateString(now);
+    const timeStr = String(jakartaTime.getHours()).padStart(2, '0') + ':' + String(jakartaTime.getMinutes()).padStart(2, '0');
+
+    const attObj = {
+        scheduleId: scheduleId,
+        teacherId: window.currentUser.id || window.currentUser.nip || 'guru',
+        teacherName: window.currentUser.name,
+        subject: subject,
+        class: targetClass,
+        date: dateStr,
+        time: timeStr,
+        status: status,
+        createdAt: new Date().toISOString()
+    };
+
+    if (!Array.isArray(window.appState.teacherAttendance)) {
+        window.appState.teacherAttendance = [];
+    }
+
+    const customId = `att_guru_${scheduleId}_${dateStr}`;
+    const res = await window.saveDataToCloud('teacherAttendance', attObj, customId);
+
+    if (res) {
+        window.showToast("Berhasil melakukan absen mengajar!", "success");
+        window.renderTeacherAttendance();
+    }
+};
+
+// Fungsi Unduh File Word Absensi Mengajar
+window.downloadTeacherAttendanceWord = function() {
+    let teacherAttList = window.appState.teacherAttendance || [];
+    const settings = window.appState.settings || {};
+
+    if (window.teacherAttNameFilter && window.teacherAttNameFilter !== 'Semua') {
+        teacherAttList = teacherAttList.filter(a => (a.teacherName || a.namaGuru) === window.teacherAttNameFilter);
+    }
+    if (window.teacherAttDateFilter) {
+        teacherAttList = teacherAttList.filter(a => a.date === window.teacherAttDateFilter);
+    }
+    if (window.teacherAttMonthFilter) {
+        teacherAttList = teacherAttList.filter(a => a.date && a.date.startsWith(window.teacherAttMonthFilter));
+    }
+
+    if (!teacherAttList.length) {
+        window.showToast("Tidak ada data absensi mengajar untuk diunduh pada filter ini!", "error");
+        return;
+    }
+
+    let tableRows = teacherAttList.map((a, idx) => `
+        <tr>
+            <td style="border:1px solid #000; padding:5px; text-align:center;">${idx + 1}</td>
+            <td style="border:1px solid #000; padding:5px; font-weight:bold;">${a.teacherName || a.namaGuru || '-'}</td>
+            <td style="border:1px solid #000; padding:5px;">${a.subject || '-'}</td>
+            <td style="border:1px solid #000; padding:5px; text-align:center;">${a.class || '-'}</td>
+            <td style="border:1px solid #000; padding:5px; text-align:center;">${a.date || '-'} (${a.time || '-'})</td>
+            <td style="border:1px solid #000; padding:5px; text-align:center;">${a.status || 'Hadir'}</td>
+        </tr>
+    `).join('');
+
+    const wordTemplate = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+            <meta charset='utf-8'>
+            <title>Rekap Absensi Mengajar</title>
+            <!--[if gte mso 9]>
+            <xml>
+                <w:WordDocument>
+                    <w:View>Print</w:View>
+                    <w:Zoom>100</w:Zoom>
+                    <w:DoNotOptimizeForBrowser/>
+                </w:WordDocument>
+            </xml>
+            <![endif]-->
+            <style>
+                @page Section1 { size: 595.3pt 841.9pt; margin: 1.5cm; }
+                div.Section1 { page: Section1; }
+                body { font-family: 'Calibri', Arial, sans-serif; font-size: 10pt; color: #000; }
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                th { background-color: #f2f2f2; border: 1px solid #000; padding: 6px; text-align: center; font-size: 10pt; }
+                td { border: 1px solid #000; padding: 6px; font-size: 9.5pt; }
+                .kop { text-align: center; font-size: 14pt; font-weight: bold; text-transform: uppercase; margin-bottom: 3px; }
+                .subkop { text-align: center; font-size: 10pt; font-weight: bold; margin-bottom: 15px; }
+            </style>
+        </head>
+        <body>
+            <div class="Section1">
+                <div class="kop">${settings.schoolName || 'SIM-MIHURI'}</div>
+                <div class="subkop">REKAPITULASI ABSENSI MENGAJAR GURU<br>TAHUN AJARAN ${settings.year || '2026/2027'}</div>
+                <hr style="border: 1px solid #000; margin-bottom: 15px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th width="35px">No</th>
+                            <th>Nama Guru</th>
+                            <th>Mata Pelajaran</th>
+                            <th width="60px">Kelas</th>
+                            <th width="110px">Tanggal & Waktu</th>
+                            <th width="70px">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>${tableRows}</tbody>
+                </table>
+            </div>
+        </body>
+        </html>
+    `;
+
+    const blob = new Blob(['\ufeff' + wordTemplate], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Rekap_Absen_Mengajar_${new Date().toISOString().split('T')[0]}.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    window.showToast("Berhasil mengunduh Word Absensi Mengajar!", "success");
+};
 
         /* --- REKAP DATA (TABBED) --- */
         window.switchRecapTab = (tab) => {
