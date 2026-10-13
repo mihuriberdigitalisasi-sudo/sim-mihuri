@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -123,45 +122,49 @@
     </div>
     
     <!-- Login Screen -->
-    <div id="login-screen" class="fixed inset-0 z-[60] flex w-full h-full bg-login fade-in items-center justify-center p-4 overflow-y-auto">
-        <div class="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-slate-100 my-auto">
-            <div class="w-full md:w-5/12 bg-gradient-to-br from-blue-700 via-indigo-800 to-purple-900 py-6 px-4 md:p-10 text-white flex flex-col justify-center items-center relative overflow-hidden flex-shrink-0">
-                <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-                <i class="fas fa-graduation-cap text-5xl md:text-8xl mb-3 md:mb-6 drop-shadow-2xl relative z-10 text-blue-100"></i>
-                <h1 class="text-2xl md:text-3xl font-black mb-1 md:mb-2 text-center relative z-10 tracking-tight" id="login-school-name">SIM-MIhuri</h1>
-                <p class="text-blue-200 text-center text-[10px] md:text-xs tracking-[0.2em] uppercase font-bold relative z-10">Sistem Informasi Akademik</p>
-                <div class="mt-4 md:mt-8 flex items-center gap-2 bg-black/20 backdrop-blur-md px-4 py-2 rounded-full text-[10px] md:text-xs border border-white/10 relative z-10 font-medium">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
-                    <span>Versi 0.0.2-Final</span>
-                </div>
+<div id="login-screen" class="fixed inset-0 z-[60] flex w-full h-full bg-login fade-in items-center justify-center p-4 overflow-y-auto">
+    <div class="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-slate-100 my-auto">
+        <div class="w-full md:w-5/12 bg-gradient-to-br from-blue-700 via-indigo-800 to-purple-900 py-6 px-4 md:p-10 text-white flex flex-col justify-center items-center relative overflow-hidden flex-shrink-0">
+            <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+            
+            <!-- LOGO SEKOLAH MI IHYAUL ULUM BLURI -->
+            <div class="w-28 h-28 md:w-36 md:h-36 mb-4 md:mb-6 relative z-10 flex items-center justify-center drop-shadow-2xl">
+                <img src="https://lh3.googleusercontent.com/d/1F3Ts8vwyhArrUnj3U0xI3QIsdiVOr8uk=s800" alt="Logo MI Ihyaul Ulum" class="w-full h-full object-contain">
             </div>
-            <div class="w-full md:w-7/12 p-6 sm:p-8 md:p-14 bg-white flex flex-col justify-center flex-grow">
-                <div class="mb-5 md:mb-8 text-center md:text-left">
-                    <h2 class="text-xl sm:text-3xl font-extrabold text-slate-800 mb-1.5 tracking-tight">Selamat Datang!</h2>
-                    <p class="text-slate-500 text-xs sm:text-sm font-medium">Silakan login untuk mengakses sistem.</p>
-                </div>
-                <form id="login-form" onsubmit="window.handleLogin(event)" class="space-y-5 md:space-y-6">
-                    <div>
-                        <label class="text-[10px] md:text-xs font-bold text-slate-600 uppercase tracking-widest mb-1.5 md:mb-2 block">ID Pengguna / NISN Siswa</label>
-                        <div class="relative group">
-                            <i class="fas fa-id-badge absolute top-1/2 -translate-y-1/2 left-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors"></i>
-                            <input type="password" id="password-input" class="w-full pl-12 pr-4 py-3 sm:py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-indigo-600 focus:bg-white focus:ring-4 focus:ring-indigo-600/10 outline-none transition-all font-bold text-slate-800 text-base sm:text-lg tracking-widest" required>
-                        </div>
-                    </div>
-                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 sm:py-4 px-4 rounded-xl shadow-[0_8px_20px_-6px_rgba(79,70,229,0.5)] transition-all transform hover:-translate-y-1 flex justify-center items-center gap-3 text-xs sm:text-sm tracking-wide">
-                        <span id="login-btn-text">MASUK KE SISTEM</span>
-                        <div id="login-loader" class="loader hidden border-white border-t-indigo-200"></div>
-                    </button>
 
-                    
-                    <button type="button" onclick="window.startLoginQrScanner()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 sm:py-3.5 px-4 rounded-xl shadow-md transition-all flex justify-center items-center gap-2 text-xs sm:text-sm tracking-wide mt-3">
-                        <i class="fas fa-qrcode text-base"></i>
-                        <span>LOGIN DENGAN SCAN QR</span>
-                    </button>
-                </form>
+            <h1 class="text-2xl md:text-3xl font-black mb-1 md:mb-2 text-center relative z-10 tracking-tight" id="login-school-name">SIM-MIhuri</h1>
+            <p class="text-blue-200 text-center text-[10px] md:text-xs tracking-[0.2em] uppercase font-bold relative z-10">Sistem Informasi Akademik</p>
+            <div class="mt-4 md:mt-8 flex items-center gap-2 bg-black/20 backdrop-blur-md px-4 py-2 rounded-full text-[10px] md:text-xs border border-white/10 relative z-10 font-medium">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
+                <span>Versi 0.0.2-Final</span>
             </div>
         </div>
+        <div class="w-full md:w-7/12 p-6 sm:p-8 md:p-14 bg-white flex flex-col justify-center flex-grow">
+            <div class="mb-5 md:mb-8 text-center md:text-left">
+                <h2 class="text-xl sm:text-3xl font-extrabold text-slate-800 mb-1.5 tracking-tight">Selamat Datang!</h2>
+                <p class="text-slate-500 text-xs sm:text-sm font-medium">Silakan login untuk mengakses sistem.</p>
+            </div>
+            <form id="login-form" onsubmit="window.handleLogin(event)" class="space-y-5 md:space-y-6">
+                <div>
+                    <label class="text-[10px] md:text-xs font-bold text-slate-600 uppercase tracking-widest mb-1.5 md:mb-2 block">ID Pengguna / NISN Siswa</label>
+                    <div class="relative group">
+                        <i class="fas fa-id-badge absolute top-1/2 -translate-y-1/2 left-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors"></i>
+                        <input type="password" id="password-input" class="w-full pl-12 pr-4 py-3 sm:py-4 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-indigo-600 focus:bg-white focus:ring-4 focus:ring-indigo-600/10 outline-none transition-all font-bold text-slate-800 text-base sm:text-lg tracking-widest" required>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 sm:py-4 px-4 rounded-xl shadow-[0_8px_20px_-6px_rgba(79,70,229,0.5)] transition-all transform hover:-translate-y-1 flex justify-center items-center gap-3 text-xs sm:text-sm tracking-wide">
+                    <span id="login-btn-text">MASUK KE SISTEM</span>
+                    <div id="login-loader" class="loader hidden border-white border-t-indigo-200"></div>
+                </button>
+                
+                <button type="button" onclick="window.startLoginQrScanner()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 sm:py-3.5 px-4 rounded-xl shadow-md transition-all flex justify-center items-center gap-2 text-xs sm:text-sm tracking-wide mt-3">
+                    <i class="fas fa-qrcode text-base"></i>
+                    <span>LOGIN DENGAN SCAN QR</span>
+                </button>
+            </form>
+        </div>
     </div>
+</div>
 
     <!-- App Main Layout -->
     <div id="app-layout" class="flex w-full h-full hidden relative bg-slate-50">
@@ -965,60 +968,172 @@
         };
 
         const initAppUI = () => {
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('app-layout').classList.remove('hidden');
-            
-            document.getElementById('user-name').textContent = window.currentUser.name;
-            document.getElementById('user-role').textContent = window.currentUser.role;
-            document.getElementById('user-avatar').textContent = window.currentUser.name.charAt(0).toUpperCase();
-            
-            const semInfo = document.getElementById('header-semester-info');
-            if(semInfo) semInfo.textContent = `TA ${window.appState.settings.year} - Semester ${window.appState.settings.semester}`;
-            
-            const nav = document.getElementById('nav-menu');
-            nav.innerHTML = '';
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('app-layout').classList.remove('hidden');
+    
+    // Set data user pada elemen profil bawaan di HTML
+    const userNameEl = document.getElementById('user-name');
+    const userRoleEl = document.getElementById('user-role');
+    const userAvatarEl = document.getElementById('user-avatar');
 
-            // Cek Wali Kelas
-            const isWaliKelas = window.currentUser.role === ROLES.GURU && (window.appState.homerooms || []).some(h => 
-                h.teacherName === window.currentUser.name || (window.currentUser.data && h.nip === window.currentUser.data.nip)
-            );
+    if(userNameEl) userNameEl.textContent = window.currentUser.name;
+    if(userRoleEl) userRoleEl.textContent = window.currentUser.role;
+    if(userAvatarEl) userAvatarEl.textContent = window.currentUser.name.charAt(0).toUpperCase();
+    
+    const semInfo = document.getElementById('header-semester-info');
+    if(semInfo) semInfo.textContent = `TA ${window.appState.settings.year} - Semester ${window.appState.settings.semester}`;
+    
+    const nav = document.getElementById('nav-menu');
+    nav.innerHTML = '';
 
-            const menuItems = [
-                { id: 'dashboard', icon: 'fa-chart-pie', text: 'Dashboard', roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA] },
-                { id: 'student_attendance', icon: 'fa-user-check', text: 'Absensi Saya', roles: [ROLES.SISWA] },
+    // Kontainer menu flex biasa agar rapi
+    nav.className = "flex flex-col px-3 py-2 space-y-2 overflow-y-auto custom-scrollbar";
+
+    // Cek Wali Kelas
+    const isWaliKelas = window.currentUser.role === ROLES.GURU && (window.appState.homerooms || []).some(h => 
+        h.teacherName === window.currentUser.name || (window.currentUser.data && h.nip === window.currentUser.data.nip)
+    );
+
+    const menuGroups = [
+        {
+            header: 'UTAMA',
+            icon: 'fa-home',
+            roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA],
+            items: [
+                { id: 'dashboard', icon: 'fa-chart-pie', text: 'Dashboard', roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA] }
+            ]
+        },
+        {
+            header: 'PRESENSI SAYA',
+            icon: 'fa-user-check',
+            roles: [ROLES.SISWA],
+            items: [
+                { id: 'student_attendance', icon: 'fa-user-check', text: 'Absensi Saya', roles: [ROLES.SISWA] }
+            ]
+        },
+        {
+            header: 'MASTER DATA',
+            icon: 'fa-database',
+            roles: [ROLES.ADMIN, ROLES.GURU],
+            items: [
                 { id: 'students', icon: 'fa-users', text: 'Data Siswa', roles: [ROLES.ADMIN, ROLES.GURU] },
                 { id: 'teachers', icon: 'fa-chalkboard-teacher', text: 'Data Guru', roles: [ROLES.ADMIN] },
-                { id: 'homerooms', icon: 'fa-user-tie', text: 'Master Wali Kelas', roles: [ROLES.ADMIN, ROLES.GURU] },
+                { id: 'homerooms', icon: 'fa-user-tie', text: 'Master Wali Kelas', roles: [ROLES.ADMIN, ROLES.GURU] }
+            ]
+        },
+        {
+            header: 'PRESENSI',
+            icon: 'fa-clipboard-user',
+            roles: [ROLES.ADMIN, ROLES.GURU],
+            items: [
                 { id: 'attendance', icon: 'fa-user-check', text: 'Absensi Kehadiran', roles: [ROLES.ADMIN, ...(isWaliKelas ? [ROLES.GURU] : [])] },
-                { id: 'teacher-attendance', icon: 'fa-user-clock', text: 'Absen Mengajar', roles: [ROLES.ADMIN, ROLES.GURU] },
+                { id: 'teacher-attendance', icon: 'fa-user-clock', text: 'Absen Mengajar', roles: [ROLES.ADMIN, ROLES.GURU] }
+            ]
+        },
+        {
+            header: 'AKADEMIK & EVALUASI',
+            icon: 'fa-graduation-cap',
+            roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA],
+            items: [
                 { id: 'academics', icon: 'fa-book-open', text: 'Akademik & Nilai', roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA] },
                 { id: 'catatan', icon: 'fa-clipboard-list', text: 'Catatan Siswa', roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA] },
+                { id: 'cbt', icon: 'fa-laptop-code', text: 'Ujian CBT', roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA] }
+            ]
+        },
+        {
+            header: 'KEUANGAN & INFORMASI',
+            icon: 'fa-wallet',
+            roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA],
+            items: [
                 { id: 'payments', icon: 'fa-money-bill-wave', text: 'Pembayaran', roles: [ROLES.ADMIN, ROLES.SISWA] },
                 { id: 'schedules', icon: 'fa-calendar-alt', text: 'Jadwal Pelajaran', roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA] },
-                { id: 'announcements', icon: 'fa-bullhorn', text: 'Pengumuman', roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA] },
+                { id: 'announcements', icon: 'fa-bullhorn', text: 'Pengumuman', roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA] }
+            ]
+        },
+        {
+            header: 'LAPORAN & RAPORT',
+            icon: 'fa-file-lines',
+            roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA],
+            items: [
                 { id: 'rapot', icon: 'fa-file-word', text: 'Rapot Siswa', roles: [ROLES.SISWA] },
-                { id: 'announcements', icon: 'fa-bullhorn', text: 'Pengumuman', roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA] },
-				{ id: 'cbt', icon: 'fa-laptop-code', text: 'Ujian CBT', roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA] }, // <-- TARUH DI SINI
-                { id: 'recap', icon: 'fa-table', text: 'Rekap Data', roles: [ROLES.ADMIN] },
-                { id: 'laporan', icon: 'fa-file-excel', text: 'Laporan Data', roles: [ROLES.ADMIN] },
                 { id: 'rapot_sts', icon: 'fa-file-invoice', text: 'Raport STS', roles: [ROLES.ADMIN, ROLES.SISWA, ...(isWaliKelas ? [ROLES.GURU] : [])] },
                 { id: 'leger', icon: 'fa-table-list', text: 'Leger Nilai', roles: [ROLES.ADMIN, ...(isWaliKelas ? [ROLES.GURU] : [])] },
+                { id: 'recap', icon: 'fa-table', text: 'Rekap Data', roles: [ROLES.ADMIN] },
+                { id: 'laporan', icon: 'fa-file-excel', text: 'Laporan Data', roles: [ROLES.ADMIN] }
+            ]
+        },
+        {
+            header: 'SISTEM',
+            icon: 'fa-sliders',
+            roles: [ROLES.ADMIN],
+            items: [
                 { id: 'backup', icon: 'fa-database', text: 'Backup & Restore', roles: [ROLES.ADMIN] },
                 { id: 'settings', icon: 'fa-cog', text: 'Pengaturan', roles: [ROLES.ADMIN] }
-            ];
-            
-            menuItems.forEach(item => {
-                if (item.roles.includes(window.currentUser.role)) {
-                    nav.innerHTML += `
-                        <a href="#" onclick="window.navigate('${item.id}')" id="nav-${item.id}" class="flex items-center gap-3.5 px-4 py-3 sm:py-3.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-all font-semibold text-xs sm:text-sm group">
-                            <div class="w-7 flex justify-center"><i class="fas ${item.icon} text-base sm:text-lg text-slate-400 group-hover:text-indigo-400 transition-colors"></i></div>
+            ]
+        }
+    ];
+
+    window.toggleMenuGroup = (groupId) => {
+        const content = document.getElementById(`group-content-${groupId}`);
+        const icon = document.getElementById(`group-icon-${groupId}`);
+        if (content) {
+            content.classList.toggle('hidden');
+            if (icon) {
+                icon.classList.toggle('rotate-90');
+            }
+        }
+    };
+
+    let menuContainerHtml = '<div class="space-y-2 w-full">';
+
+    menuGroups.forEach((group, index) => {
+        const validItems = group.items.filter(item => item.roles.includes(window.currentUser.role));
+        
+        if (validItems.length > 0 && group.roles.includes(window.currentUser.role)) {
+            if (group.header === 'UTAMA') {
+                validItems.forEach(item => {
+                    menuContainerHtml += `
+                        <a href="#" onclick="window.navigate('${item.id}')" id="nav-${item.id}" class="flex items-center gap-3.5 px-4 py-3 rounded-xl bg-slate-800/60 border border-slate-700/60 text-slate-200 hover:bg-indigo-600 hover:border-indigo-500 transition-all font-semibold text-xs group shadow-sm mb-2">
+                            <div class="w-6 flex justify-center"><i class="fas ${item.icon} text-sm text-indigo-400 group-hover:text-white transition-colors"></i></div>
                             <span>${item.text}</span>
                         </a>
                     `;
-                }
-            });
-            window.navigate('dashboard');
-        };
+                });
+            } else {
+                menuContainerHtml += `
+                    <div class="rounded-xl bg-slate-800/40 border border-slate-700/50 overflow-hidden shadow-sm transition-all mb-2">
+                        <button onclick="window.toggleMenuGroup(${index})" class="w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors">
+                            <div class="flex items-center gap-2.5">
+                                <i class="fas ${group.icon} text-indigo-400 text-xs w-4 text-center"></i>
+                                <span class="tracking-wide">${group.header}</span>
+                            </div>
+                            <i id="group-icon-${index}" class="fas fa-chevron-right text-[10px] text-slate-400 transition-transform duration-200"></i>
+                        </button>
+                        <div id="group-content-${index}" class="hidden space-y-1 p-1.5 bg-slate-900/40 border-t border-slate-700/40">
+                `;
+
+                validItems.forEach(item => {
+                    menuContainerHtml += `
+                        <a href="#" onclick="window.navigate('${item.id}')" id="nav-${item.id}" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-300 hover:bg-indigo-600/90 hover:text-white transition-all font-medium text-xs group">
+                            <div class="w-5 flex justify-center"><i class="fas ${item.icon} text-xs text-slate-400 group-hover:text-white transition-colors"></i></div>
+                            <span>${item.text}</span>
+                        </a>
+                    `;
+                });
+
+                menuContainerHtml += `
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    });
+
+    menuContainerHtml += '</div>';
+    nav.innerHTML = menuContainerHtml;
+
+    window.navigate('dashboard');
+};
 		
 		/* ==========================================================================
            FUNGSI BATCH/KOLEKTIF NILAI AKADEMIK (DENGAN INPUT FORM MATERI)
@@ -3642,25 +3757,72 @@ window.saveTeacherAccess = async function(e, teacherId) {
             }
 
             // ---------------------------------------------------------
-            // 2. CHART KEHADIRAN (7 HARI TERAKHIR)
+            // 2. CHART KEHADIRAN (7 HARI TERAKHIR - DINAMIS & RIIL)
             // ---------------------------------------------------------
             const ctxAtt = document.getElementById('chart-attendance');
             if (ctxAtt && typeof Chart !== 'undefined') {
                 destroyChart('attendance');
+
+                // Menghitung tanggal untuk 7 hari terakhir ke belakang
+                const labels = [];
+                const dataValues = [];
+                const attendanceList = window.appState.attendance || [];
+                const totalStudents = (window.appState.students || []).length || 1;
+
+                const daysMap = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+
+                for (let i = 6; i >= 0; i--) {
+                    const d = new Date();
+                    d.setDate(d.getDate() - i);
+                    
+                    // Format YYYY-MM-DD standar WIB
+                    const jakartaDate = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+                    const year = jakartaDate.getFullYear();
+                    const month = String(jakartaDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(jakartaDate.getDate()).padStart(2, '0');
+                    const dateStr = `${year}-${month}-${day}`;
+
+                    // Label nama hari (misal: Senin, Selasa, dll)
+                    labels.push(daysMap[jakartaDate.getDay()]);
+
+                    // Filter absensi pada tanggal tersebut dengan status Hadir (H) atau Terlambat (T)
+                    const dayAtt = attendanceList.filter(a => a.date === dateStr && (a.status === 'H' || a.status === 'T'));
+                    
+                    // Hitung persentase kehadiran terhadap total siswa
+                    const percentage = Math.min(100, Math.round((dayAtt.length / totalStudents) * 100));
+                    dataValues.push(percentage);
+                }
+
                 window.chartInstances['attendance'] = new Chart(ctxAtt, {
                     type: 'line',
                     data: {
-                        labels: ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'],
+                        labels: labels,
                         datasets: [{
-                            label: 'Hadir (%)',
-                            data: [95, 98, 92, 96, 94, 90, 0],
+                            label: 'Kehadiran (%)',
+                            data: dataValues,
                             borderColor: '#4f46e5',
                             backgroundColor: 'rgba(79, 70, 229, 0.08)',
                             fill: true,
-                            tension: 0.35
+                            tension: 0.35,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#4f46e5'
                         }]
                     },
-                    options: { responsive: true, maintainAspectRatio: false }
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
                 });
             }
 
@@ -4912,7 +5074,7 @@ window.renderAcademics = () => {
             </div>
 
             <!-- Bagian Paginasi (Maksimal 10 Data per Halaman) -->
-            <div class="p-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3 bg-slate-50/50">
+            <div class="p-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3 bg-slate-50/50 relative z-10">
                 <div class="text-xs text-slate-500 font-medium">
                     Menampilkan <span class="font-bold text-slate-700">${totalData > 0 ? startIndex + 1 : 0}</span> - <span class="font-bold text-slate-700">${Math.min(startIndex + pageSize, totalData)}</span> dari <span class="font-bold text-slate-700">${totalData}</span> data nilai
                 </div>
@@ -6707,13 +6869,32 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
         };
 
 		// ==========================================================================
-        // MODUL CBT + DASHBOARD MONITORING UJIAN REAL-TIME + KAMERA & FULLSCREEN KEAMANAN
+        // MODUL CBT + DASHBOARD MONITORING UJIAN REAL-TIME + KAMERA & ANTI-CHEAT (MAX 2 KALI)
         // ==========================================================================
         window.cbtStream = null;
+        window.cheatViolationCount = 0;
 
         // 1. Fungsi Mengaktifkan Kamera Depan Siswa
         window.startCbtCamera = async function() {
             try {
+                // Buat elemen video mengambang otomatis jika belum ada di DOM saat ujian dimulai
+                let videoContainer = document.getElementById('cbt-camera-box');
+                if (!videoContainer) {
+                    const content = document.getElementById('main-content');
+                    if (content) {
+                        const camDiv = document.createElement('div');
+                        camDiv.id = 'cbt-camera-box';
+                        camDiv.className = 'fixed top-20 right-4 z-[999] w-28 h-36 bg-black rounded-xl overflow-hidden border-2 border-indigo-500 shadow-2xl flex items-center justify-center';
+                        camDiv.innerHTML = `
+                            <video id="cbt-monitor-video" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
+                            <div class="absolute bottom-1 left-1 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded animate-pulse">
+                                ● DIPANTAU / REC
+                            </div>
+                        `;
+                        content.prepend(camDiv);
+                    }
+                }
+
                 const videoElement = document.getElementById('cbt-monitor-video');
                 if (!videoElement) return;
 
@@ -6727,20 +6908,26 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
                 window.showToast("Kamera pengawas aktif untuk memantau ujian.", "success");
             } catch (err) {
                 console.error("Gagal mengakses kamera:", err);
-                window.showToast("Peringatan: Izin kamera ditolak. Pastikan kamera diizinkan agar terpantau.", "error");
+                window.showToast("Peringatan: Izin kamera ditolak/tidak tersedia. Pastikan kamera diizinkan.", "error");
             }
         };
 
-        // 2. Fungsi Mematikan Kamera
+        // 2. Fungsi Mematikan Kamera & Membersihkan Keamanan
         window.stopCbtCamera = function() {
             if (window.cbtStream) {
                 window.cbtStream.getTracks().forEach(track => track.stop());
                 window.cbtStream = null;
             }
+            const videoContainer = document.getElementById('cbt-camera-box');
+            if (videoContainer) {
+                videoContainer.remove();
+            }
         };
 
-        // 3. Fungsi Mengunci Layar (Fullscreen & Deteksi Pindah Tab)
-        window.enableCbtSecurity = function() {
+        // 3. Fungsi Mengunci Layar & Keamanan Anti-Cheat (Max 2 Kali Pindah Tab)
+        window.enableCbtSecurity = function(examId) {
+            window.cheatViolationCount = 0;
+
             const elem = document.documentElement;
             if (elem.requestFullscreen) {
                 elem.requestFullscreen().catch(err => console.log(err));
@@ -6749,6 +6936,22 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
             }
 
             document.addEventListener("fullscreenchange", window.handleCbtFullscreenExit);
+            
+            // Listener Deteksi Berpindah Tab / Keluar Aplikasi
+            window.handleCbtVisibilityChange = function() {
+                if (document.hidden) {
+                    window.cheatViolationCount++;
+                    
+                    if (window.cheatViolationCount === 1) {
+                        alert("PERINGATAN 1!\nAnda terdeteksi keluar dari halaman ujian atau berpindah tab. Jika Anda keluar 1 kali lagi, ujian akan otomatis dikumpulkan (submit) dan Anda dinyatakan selesai.");
+                        window.showToast("Peringatan 1: Jangan keluar dari halaman ujian!", "error");
+                    } else if (window.cheatViolationCount >= 2) {
+                        alert("PELANGGARAN TERDETEKSI 2 KALI!\nSistem otomatis menghentikan ujian Anda karena meninggalkan halaman ujian.");
+                        window.finishExamAutomatically(examId, "Diskualifikasi / Keluar Halaman 2 Kali");
+                    }
+                }
+            };
+
             document.addEventListener("visibilitychange", window.handleCbtVisibilityChange);
         };
 
@@ -6760,7 +6963,9 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
                 }
             }
             document.removeEventListener("fullscreenchange", window.handleCbtFullscreenExit);
-            document.removeEventListener("visibilitychange", window.handleCbtVisibilityChange);
+            if (window.handleCbtVisibilityChange) {
+                document.removeEventListener("visibilitychange", window.handleCbtVisibilityChange);
+            }
         };
 
         window.handleCbtFullscreenExit = function() {
@@ -6769,41 +6974,47 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
             }
         };
 
-        window.handleCbtVisibilityChange = function() {
-            if (document.hidden) {
-                window.showToast("PERINGATAN: Anda terdeteksi berpindah aplikasi/tab browser!", "error");
+        // 4. Submit Otomatis dan Logout Paksa Saat Terkena Blokir Anti-Cheat
+        window.finishExamAutomatically = async function(examId, reason) {
+            window.disableCbtSecurity();
+            window.showToast("Ujian diakhiri otomatis: " + reason, "error");
+
+            // Simpan status ujian selesai ke cloud
+            if (typeof window.saveDataToCloud === 'function') {
+                await window.saveDataToCloud('cbtResults', {
+                    examId: examId,
+                    nisn: window.currentUser ? window.currentUser.id : 'unknown',
+                    studentName: window.currentUser ? window.currentUser.name : 'Siswa',
+                    score: 0, // Atau nilai hitung otomatis sesuai sistem Anda
+                    status: 'Selesai (Auto-Submitted / ' + reason + ')',
+                    submittedAt: new Date().toISOString()
+                });
             }
+
+            // Logout otomatis dan kembali ke halaman login setelah 1.5 detik
+            setTimeout(() => {
+                window.currentUser = null;
+                if (typeof window.renderLogin === 'function') {
+                    window.renderLogin();
+                } else {
+                    location.reload();
+                }
+            }, 1500);
         };
 
-        // 4. Tambahan Fungsi Saat Siswa Mulai Mengerjakan Ujian (Integrasi Keamanan)
-        const originalStartCbtExam = window.startCbtExam; // Simpan fungsi asli jika ada
+        // 5. Tambahan Fungsi Saat Siswa Mulai Mengerjakan Ujian
+        const originalStartCbtExam = window.startCbtExam; 
         window.startCbtExam = function(examId) {
-            // Aktifkan Keamanan & Kamera Pengawas saat ujian dimulai
-            window.enableCbtSecurity();
+            // Aktifkan Keamanan Fullscreen, Kamera Pengawas, dan Anti-Cheat
+            window.enableCbtSecurity(examId);
             window.startCbtCamera();
 
-            // Jika ada fungsi asli penampil lembar soal, jalankan di sini
             if (typeof originalStartCbtExam === 'function') {
                 originalStartCbtExam(examId);
-            } else {
-                // Fallback jika belum ada fungsi aslinya, tampilkan elemen video mengambang di layar ujian
-                const content = document.getElementById('main-content');
-                if (content && !document.getElementById('cbt-camera-box')) {
-                    const camDiv = document.createElement('div');
-                    camDiv.id = 'cbt-camera-box';
-                    camDiv.className = 'fixed top-20 right-4 z-[999] w-28 h-36 bg-black rounded-xl overflow-hidden border-2 border-indigo-500 shadow-2xl';
-                    camDiv.innerHTML = `
-                        <video id="cbt-monitor-video" autoplay playsinline muted class="w-full h-full object-cover"></video>
-                        <div class="absolute bottom-1 left-1 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded animate-pulse">
-                            ● DIPANTAU
-                        </div>
-                    `;
-                    content.prepend(camDiv);
-                }
             }
         };
 
-        // 5. Fungsi Utama renderCBT (Kombinasi Sempurna dengan Batasan Akses Asli Anda)
+        // 6. Fungsi Utama renderCBT (Tampilan Utama Sesuai Sistem Anda)
         window.renderCBT = () => {
             const content = document.getElementById('main-content');
             if (!content) return;
@@ -6814,7 +7025,7 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
 
             if (!window.appState.cbtExams) window.appState.cbtExams = [];
             if (!window.appState.cbtResults) window.appState.cbtResults = [];
-            if (!window.appState.activeCbtSessions) window.appState.activeCbtSessions = []; // Data siswa sedang ujian
+            if (!window.appState.activeCbtSessions) window.appState.activeCbtSessions = [];
 
             const exams = window.appState.cbtExams;
             const results = window.appState.cbtResults;
@@ -6829,34 +7040,6 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
                         actionBtn = `<span class="px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-xl font-bold text-xs">Selesai (Nilai: ${myResult.score})</span>`;
                     } else {
                         actionBtn = `<button onclick="window.startCbtExam('${ex.id}')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md transition-all"><i class="fas fa-play mr-1"></i> Mulai Ujian</button>`;
-                        try {
-            // 1. Paksa Masuk Fullscreen (Harus dipicu dari klik tombol langsung)
-            const elem = document.documentElement;
-            if (elem.requestFullscreen) {
-                elem.requestFullscreen().catch(err => console.log(err));
-            }
-
-            // 2. Aktifkan Kamera Depan
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
-                .then(stream => {
-                    window.cbtStream = stream;
-                    const videoElement = document.getElementById('cbt-monitor-video');
-                    if (videoElement) videoElement.srcObject = stream;
-                })
-                .catch(err => {
-                    console.log("Kamera diblokir/tidak tersedia:", err);
-                    window.showToast("Catatan: Kamera tidak aktif (Pastikan menggunakan HTTPS/Localhost & izinkan kamera)", "error");
-                });
-
-            // 3. Deteksi Pindah Tab / Keluar Layar Penuh
-            document.addEventListener("visibilitychange", () => {
-                if (document.hidden) {
-                    alert("PERINGATAN: Anda terdeteksi keluar dari halaman ujian / pindah tab!");
-                }
-            });
-        } catch(e) {
-            console.log("Keamanan CBT:", e);
-        }
                     }
                 } else {
                     actionBtn = `
@@ -6886,13 +7069,11 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
                 examsHtml = `<tr><td colspan="6" class="p-8 text-center text-slate-400 font-semibold">Belum ada ujian CBT yang tersedia saat ini.</td></tr>`;
             }
 
-            // Render khusus bagian Monitoring Ujian (Hanya untuk Guru / Admin - Tetap dipertahankan)
             let monitoringSectionHtml = '';
             if (!isSiswa) {
                 const activeExamOptions = exams.map(e => `<option value="${e.id}">${e.title} - Kelas ${e.class}</option>`).join('');
                 
                 monitoringSectionHtml = `
-                    <!-- Dashboard Monitoring CBT Live -->
                     <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 mb-8 slide-up">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-slate-100">
                             <div>
@@ -6913,7 +7094,6 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
                             </div>
                         </div>
 
-                        <!-- Ringkasan Status Live -->
                         <div class="grid grid-cols-3 gap-3 mb-6">
                             <div class="p-3.5 bg-amber-50 border border-amber-100 rounded-2xl text-center">
                                 <span class="block text-[10px] font-bold text-amber-500 uppercase">Sedang Ujian (Online)</span>
@@ -6929,7 +7109,6 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
                             </div>
                         </div>
 
-                        <!-- Tabel Detail Siswa Online -->
                         <div class="overflow-x-auto border border-slate-200 rounded-2xl">
                             <table class="w-full text-left border-collapse min-w-[650px]">
                                 <thead>
@@ -6988,9 +7167,6 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
             `;
         };
 
-        /* ==========================================================================
-           LOGIKA FUNGSI REFRESH MONITORING CBT
-           ========================================================================== */
         window.updateCbtMonitoringTable = () => {
             const selectEl = document.getElementById('monitor-exam-select');
             if (!selectEl) return;
@@ -7009,8 +7185,6 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
             const exam = (window.appState.cbtExams || []).find(e => e.id === examId);
             const results = (window.appState.cbtResults || []).filter(r => r.examId === examId);
             const activeSessions = (window.appState.activeCbtSessions || []).filter(s => s.examId === examId);
-
-            // Cari semua siswa di kelas target
             const classStudents = (window.appState.students || []).filter(s => s.class === exam.class);
 
             let activeCount = 0;
@@ -7099,7 +7273,6 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
                         </div>
 
                         <div id="cbt-questions-container" class="space-y-4 max-h-[45vh] overflow-y-auto p-2 border border-slate-200 rounded-xl">
-                            <!-- Template Soal Pertama (Default: Pilihan Ganda) -->
                             <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3 question-item" data-index="0">
                                 <div class="flex justify-between items-center">
                                     <span class="text-xs font-black text-indigo-600 q-label">Soal #1</span>
@@ -7110,7 +7283,6 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
                                     </select>
                                 </div>
                                 <input type="text" placeholder="Tuliskan pertanyaan..." class="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs q-text" required>
-                                
                                 <div class="question-options-area">
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                         <input type="text" placeholder="Pilihan A" class="p-2 bg-white border border-slate-200 rounded-lg text-xs q-opt-a" required>
@@ -7160,13 +7332,13 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
                 optArea.innerHTML = `
                     <div class="space-y-2">
                         <div class="flex gap-2 items-center">
-                            <input type="text" placeholder="Pernyataan 1 (cth: Matahari terbit dari timur)" class="flex-1 p-2 bg-white border border-slate-200 rounded-lg text-xs q-statement-1" required>
+                            <input type="text" placeholder="Pernyataan 1" class="flex-1 p-2 bg-white border border-slate-200 rounded-lg text-xs q-statement-1" required>
                             <select class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold q-bs-1">
                                 <option value="B">Benar</option><option value="S">Salah</option>
                             </select>
                         </div>
                         <div class="flex gap-2 items-center">
-                            <input type="text" placeholder="Pernyataan 2 (cth: Air berwujud padat di suhu 100°C)" class="flex-1 p-2 bg-white border border-slate-200 rounded-lg text-xs q-statement-2" required>
+                            <input type="text" placeholder="Pernyataan 2" class="flex-1 p-2 bg-white border border-slate-200 rounded-lg text-xs q-statement-2" required>
                             <select class="p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold q-bs-2">
                                 <option value="B">Benar</option><option value="S">Salah</option>
                             </select>
@@ -7228,7 +7400,7 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
                     });
                 } else {
                     questions.push({
-                        type: type, // 'pg' atau 'kompleks'
+                        type: type,
                         question: questionText,
                         options: {
                             A: item.querySelector('.q-opt-a').value,
@@ -7730,26 +7902,42 @@ window.teacherAttNameFilter = window.teacherAttNameFilter || 'Semua';
 window.teacherAttDateFilter = window.teacherAttDateFilter || '';
 window.teacherAttMonthFilter = window.teacherAttMonthFilter || '';
 
-window.renderTeacherAttendance = function() {
+// =========================================================
+// KODE UTUH: ABSENSI MENGAJAR GURU (GRAFIK PER KELAS BERDASARKAN ABSEN)
+// =========================================================
+window.renderTeacherAttendance = () => {
     const content = document.getElementById('main-content');
     if (!content) return;
 
-    const daysIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-    const now = new Date();
-    const todayDayName = daysIndo[now.getDay()]; // contoh: "Senin"
-    const todayDateStr = getLocalDateString(now); // YYYY-MM-DD
-
-    const isGuru = window.currentUser && window.currentUser.role === ROLES.GURU;
-    const isAdmin = window.currentUser && window.currentUser.role === ROLES.ADMIN;
-    const currentUserName = (window.currentUser ? window.currentUser.name : '').toLowerCase().trim();
+    const isAdmin = window.currentUser && (window.currentUser.role === 'admin' || window.currentUser.isAdmin);
+    const isGuru = window.currentUser && window.currentUser.role === 'guru';
+    const currentUserName = (window.currentUser && window.currentUser.name ? window.currentUser.name : '').toLowerCase().trim();
 
     const schedules = window.appState.schedules || [];
     const teacherAtt = window.appState.teacherAttendance || [];
+    const settings = window.appState.settings || {};
 
-    // Ambil daftar unik nama guru untuk opsi filter Admin
-    const allTeacherNames = [...new Set(teacherAtt.map(a => a.teacherName || a.namaGuru).filter(Boolean))].sort();
+    const now = new Date();
+    const jakartaNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+    const daysIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const todayDayName = daysIndo[jakartaNow.getDay()];
+    const todayDateStr = getLocalDateString(now);
 
-    // Filter jadwal hari ini khusus untuk guru yang sedang login (atau seluruhnya jika Admin)
+    // Inisialisasi filter jika belum ada
+    if (window.teacherAttDayFilter === undefined) window.teacherAttDayFilter = 'Semua';
+    if (window.teacherAttMonthFilter === undefined) window.teacherAttMonthFilter = '';
+    if (window.teacherAttDateFilter === undefined) window.teacherAttDateFilter = '';
+    if (window.teacherAttNameFilter === undefined) window.teacherAttNameFilter = 'Semua';
+
+    // Ambil daftar unik nama guru dari jadwal untuk dropdown filter admin
+    const allTeacherNames = [...new Set(schedules.map(s => s.teacher).filter(Boolean))].sort();
+
+    let teacherOptionsHtml = `<option value="Semua" ${window.teacherAttNameFilter === 'Semua' ? 'selected' : ''}>Semua Guru</option>`;
+    teacherOptionsHtml += allTeacherNames.map(name => `
+        <option value="${name}" ${name === window.teacherAttNameFilter ? 'selected' : ''}>${name}</option>
+    `).join('');
+
+    // --- BAGIAN 1: FILTER & TAMPILAN JADWAL/ABSEN HARI INI ---
     let myTodaySchedules = schedules.filter(s => {
         const isToday = s.day === todayDayName;
         if (!isToday) return false;
@@ -7766,7 +7954,6 @@ window.renderTeacherAttendance = function() {
     // Urutkan jadwal berdasarkan jam
     myTodaySchedules.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 
-    // Jika Admin menggunakan filter tambahan pada riwayat/tampilan
     if (isAdmin && window.teacherAttNameFilter && window.teacherAttNameFilter !== 'Semua') {
         myTodaySchedules = myTodaySchedules.filter(s => {
             const schTeacher = (s.teacher || '').toLowerCase().trim();
@@ -7774,13 +7961,7 @@ window.renderTeacherAttendance = function() {
         });
     }
 
-    let teacherOptionsHtml = `<option value="Semua" ${window.teacherAttNameFilter === 'Semua' ? 'selected' : ''}>Semua Guru</option>`;
-    teacherOptionsHtml += allTeacherNames.map(name => `
-        <option value="${name}" ${name === window.teacherAttNameFilter ? 'selected' : ''}>${name}</option>
-    `).join('');
-
     let rowsHtml = myTodaySchedules.map((s, idx) => {
-        // Cek apakah sudah absen mengajar pada jadwal ini hari ini
         const existingAtt = teacherAtt.find(a => 
             a.scheduleId === s.id && 
             a.date === todayDateStr
@@ -7823,11 +8004,51 @@ window.renderTeacherAttendance = function() {
         `;
     }
 
+    // --- BAGIAN 2: DATA UNTUK GRAFIK PER KELAS (BERDASARKAN YANG SUDAH ABSEN) ---
+    let filteredAttList = teacherAtt.filter(item => {
+        const itemDate = item.tanggal || item.date || '';
+        let isoDate = itemDate;
+        if (itemDate.includes('/')) {
+            const parts = itemDate.split('/');
+            if (parts.length === 3) isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+
+        const matchMonth = !window.teacherAttMonthFilter || isoDate.startsWith(window.teacherAttMonthFilter);
+        const matchDate = !window.teacherAttDateFilter || isoDate === window.teacherAttDateFilter;
+        
+        let matchName = true;
+        if (isAdmin && window.teacherAttNameFilter && window.teacherAttNameFilter !== 'Semua') {
+            const tName = (item.teacherName || item.namaGuru || '').toLowerCase();
+            matchName = tName.includes(window.teacherAttNameFilter.toLowerCase());
+        }
+
+        let matchDay = true;
+        if (window.teacherAttDayFilter && window.teacherAttDayFilter !== 'Semua' && isoDate) {
+            const d = new Date(isoDate);
+            const dayName = daysIndo[d.getDay()];
+            matchDay = (dayName === window.teacherAttDayFilter);
+        }
+
+        return matchMonth && matchDate && matchName && matchDay;
+    });
+
+    // Rekapitulasi jumlah kehadiran berdasarkan Kelas
+    const classStats = {};
+    filteredAttList.forEach(item => {
+        const targetClass = item.kelas || item.class || 'Lainnya';
+        const className = `Kelas ${targetClass}`;
+        classStats[className] = (classStats[className] || 0) + 1;
+    });
+
+    const chartLabels = Object.keys(classStats);
+    const chartDataValues = Object.values(classStats);
+
+    // Render Utama ke DOM
     content.innerHTML = `
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 slide-up">
             <div>
                 <h2 class="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">Absen Mengajar Guru</h2>
-                <p class="text-xs sm:text-sm text-slate-500 font-medium">Presensi kehadiran mengajar sesuai jadwal pelajaran hari ini.</p>
+                <p class="text-xs sm:text-sm text-slate-500 font-medium">Presensi kehadiran mengajar sesuai jadwal pelajaran dan rekam aktivitas.</p>
             </div>
             <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                 <button onclick="window.downloadTeacherAttendanceWord()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md transition-all flex items-center gap-2">
@@ -7836,7 +8057,7 @@ window.renderTeacherAttendance = function() {
             </div>
         </div>
 
-        <!-- Filter Bar: Nama Guru, Tanggal, dan Bulan -->
+        <!-- Filter Bar: Nama Guru, Tanggal, Bulan & Hari -->
         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mb-6 flex flex-wrap items-center gap-4 slide-up">
             ${isAdmin ? `
                 <div class="flex items-center gap-2">
@@ -7846,6 +8067,14 @@ window.renderTeacherAttendance = function() {
                     </select>
                 </div>
             ` : ''}
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-500"><i class="fas fa-calendar-day text-indigo-500"></i> Hari:</span>
+                <select onchange="window.teacherAttDayFilter = this.value; window.renderTeacherAttendance();" class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
+                    ${['Semua', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'].map(d => `
+                        <option value="${d}" ${window.teacherAttDayFilter === d ? 'selected' : ''}>${d === 'Semua' ? 'Semua Hari' : d}</option>
+                    `).join('')}
+                </select>
+            </div>
             <div class="flex items-center gap-2">
                 <span class="text-xs font-bold text-slate-500"><i class="fas fa-calendar-alt text-indigo-500"></i> Tanggal:</span>
                 <input type="date" value="${window.teacherAttDateFilter || ''}" onchange="window.teacherAttDateFilter = this.value; window.teacherAttMonthFilter = ''; window.renderTeacherAttendance();" class="p-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
@@ -7858,6 +8087,17 @@ window.renderTeacherAttendance = function() {
             </div>
         </div>
 
+        <!-- GRAFIK MENGAJAR PER KELAS (BERDASARKAN YANG SUDAH ABSEN) -->
+        <div class="bg-white p-5 sm:p-6 rounded-3xl shadow-sm border border-slate-100 mb-6 slide-up">
+            <h3 class="font-extrabold text-slate-800 text-sm sm:text-base flex items-center gap-2 mb-4 pb-4 border-b border-slate-100">
+                <i class="fas fa-chart-bar text-indigo-600"></i> Grafik Jumlah Absensi Mengajar per Kelas
+            </h3>
+            <div class="relative h-64 sm:h-72 w-full">
+                <canvas id="chart-teacher-attendance"></canvas>
+            </div>
+        </div>
+
+        <!-- TABEL JADWAL & ABSEN HARI INI -->
         <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden slide-up">
             <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-white">
                 <h3 class="font-extrabold text-slate-800 flex items-center gap-2">
@@ -7881,6 +8121,37 @@ window.renderTeacherAttendance = function() {
             </div>
         </div>
     `;
+
+    // Render ChartJS untuk Grafik Mengajar per Kelas
+    setTimeout(() => {
+        const ctx = document.getElementById('chart-teacher-attendance');
+        if (ctx && typeof Chart !== 'undefined') {
+            if (window.chartInstances && window.chartInstances['teacherAtt']) {
+                window.chartInstances['teacherAtt'].destroy();
+            }
+            if (!window.chartInstances) window.chartInstances = {};
+
+            window.chartInstances['teacherAtt'] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartLabels.length > 0 ? chartLabels : ['Belum Ada Data Absen'],
+                    datasets: [{
+                        label: 'Jumlah Kehadiran Mengajar',
+                        data: chartDataValues.length > 0 ? chartDataValues : [0],
+                        backgroundColor: '#4f46e5',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+        }
+    }, 50);
 };
 
 // Helper untuk Memproses Absensi Mengajar
