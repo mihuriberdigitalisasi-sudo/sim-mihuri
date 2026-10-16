@@ -1151,114 +1151,191 @@
            FUNGSI BATCH/KOLEKTIF NILAI AKADEMIK (DENGAN INPUT FORM MATERI)
            ========================================================================== */
         window.openBatchAcademicModal = function() {
-    const students = window.getFilteredStudents();
-    const classes = [...new Set(students.map(s => s.class))].sort();
-    const currentClass = window.acadClassFilter && window.acadClassFilter !== 'Semua' 
-        ? window.acadClassFilter 
-        : (classes[0] || '1A');
+            const students = window.getFilteredStudents();
+            const classes = [...new Set(students.map(s => s.class))].sort();
+            const currentClass = window.acadClassFilter && window.acadClassFilter !== 'Semua' 
+                ? window.acadClassFilter 
+                : (classes[0] || '1A');
 
-    let filteredStudents = students.filter(s => s.class === currentClass);
-    filteredStudents = sortSiswaByName(filteredStudents);
+            let filteredStudents = students.filter(s => s.class === currentClass);
+            filteredStudents = sortSiswaByName(filteredStudents);
 
-    const classOptionsHtml = classes.map(c => `
-        <option value="${c}" ${c === currentClass ? 'selected' : ''}>Kelas ${c}</option>
-    `).join('');
+            const classOptionsHtml = classes.map(c => `
+                <option value="${c}" ${c === currentClass ? 'selected' : ''}>Kelas ${c}</option>
+            `).join('');
 
-    const typeOptionsHtml = ACADEMIC_TYPES.map(t => `<option value="${t}">${t}</option>`).join('');
+            const typeOptionsHtml = ACADEMIC_TYPES.map(t => `<option value="${t}">${t}</option>`).join('');
 
-    // --- LOGIKA FORM MAPEL OTOMATIS SESUAI GURU LOGIN ---
-    const isGuru = window.currentUser && window.currentUser.role === ROLES.GURU;
-    const teacherSubjects = (isGuru && window.currentUser.subjects && window.currentUser.subjects.length > 0)
-        ? window.currentUser.subjects 
-        : [];
+            const isGuru = window.currentUser && window.currentUser.role === ROLES.GURU;
+            const assignments = isGuru ? (window.currentUser.data?.teacherAssignments || {}) : {};
+            
+            let teacherSubjectsForClass = [];
+            if (isGuru) {
+                if (Object.keys(assignments).length > 0) {
+                    teacherSubjectsForClass = assignments[currentClass] || [];
+                } else {
+                    teacherSubjectsForClass = window.currentUser.subjects || [];
+                }
+            }
 
-    let subjectInputHtml = '';
-    if (teacherSubjects.length > 0) {
-        // Jika Guru login dan memiliki daftar Mapel Pengampuan
-        const subjectOptions = teacherSubjects.map(s => `<option value="${s}">${s}</option>`).join('');
-        subjectInputHtml = `
-            <select id="batch-acad-subject" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm" required>
-                ${subjectOptions}
-            </select>
-        `;
-    } else {
-        // Jika Admin atau Guru belum diatur daftar mapelnya (Fallback Text Input)
-        subjectInputHtml = `
-            <input type="text" id="batch-acad-subject" placeholder="Contoh: Matematika" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm" required>
-        `;
-    }
-    // ---------------------------------------------------
+            let subjectInputHtml = '';
+            if (isGuru && teacherSubjectsForClass.length > 0) {
+                const subjectOptions = teacherSubjectsForClass.map(s => `<option value="${s}">${s}</option>`).join('');
+                subjectInputHtml = `
+                    <select id="batch-acad-subject" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm" required>
+                        ${subjectOptions}
+                    </select>
+                `;
+            } else if (isGuru) {
+                subjectInputHtml = `
+                    <select id="batch-acad-subject" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm" required>
+                        <option value="">Tidak ada mapel untuk kelas ini</option>
+                    </select>
+                `;
+            } else {
+                subjectInputHtml = `
+                    <input type="text" id="batch-acad-subject" placeholder="Contoh: Matematika" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm" required>
+                `;
+            }
 
-    let studentRowsHtml = filteredStudents.map((s, idx) => `
-        <tr class="border-b border-slate-100 text-xs sm:text-sm hover:bg-slate-50">
-            <td class="p-3 text-center font-bold text-slate-400">${idx + 1}</td>
-            <td class="p-3 font-extrabold text-slate-800">${s.name} <span class="block text-[10px] text-slate-400 font-medium">NISN: ${s.nisn}</span></td>
-            <td class="p-3 text-center font-bold text-indigo-600">${s.class}</td>
-            <td class="p-3">
-                <input type="number" name="score_${s.nisn}" data-nisn="${s.nisn}" data-name="${s.name}" min="0" max="100" placeholder="0 - 100" class="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 font-extrabold text-sm text-center outline-none focus:border-indigo-600 focus:bg-white">
-            </td>
-        </tr>
-    `).join('');
+            let studentRowsHtml = filteredStudents.map((s, idx) => `
+                <tr class="border-b border-slate-100 text-xs sm:text-sm hover:bg-slate-50">
+                    <td class="p-3 text-center font-bold text-slate-400">${idx + 1}</td>
+                    <td class="p-3 font-extrabold text-slate-800">${s.name} <span class="block text-[10px] text-slate-400 font-medium">NISN: ${s.nisn}</span></td>
+                    <td class="p-3 text-center font-bold text-indigo-600">${s.class}</td>
+                    <td class="p-3">
+                        <input type="number" name="score_${s.nisn}" data-nisn="${s.nisn}" data-name="${s.name}" min="0" max="100" placeholder="0 - 100" class="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 font-extrabold text-sm text-center outline-none focus:border-indigo-600 focus:bg-white">
+                    </td>
+                </tr>
+            `).join('');
 
-    if (!filteredStudents.length) {
-        studentRowsHtml = `<tr><td colspan="4" class="p-6 text-center text-slate-400 font-semibold">Tidak ada siswa ditemukan di kelas ini.</td></tr>`;
-    }
+            if (!filteredStudents.length) {
+                studentRowsHtml = `<tr><td colspan="4" class="p-6 text-center text-slate-400 font-semibold">Tidak ada siswa ditemukan di kelas ini.</td></tr>`;
+            }
 
-    window.openModal(`
-        <div class="p-6 sm:p-8">
-            <h3 class="text-xl font-extrabold text-slate-800 mb-2 flex items-center gap-2">
-                <i class="fas fa-layer-group text-indigo-600"></i> Input Nilai Akademik Kolektif / Batch
-            </h3>
-            <p class="text-xs text-slate-500 mb-6 font-medium">Masukkan nilai beberapa siswa sekaligus untuk kelas, mata pelajaran, dan materi tertentu.</p>
+            window.openModal(`
+                <div class="p-6 sm:p-8">
+                    <h3 class="text-xl font-extrabold text-slate-800 mb-2 flex items-center gap-2">
+                        <i class="fas fa-layer-group text-indigo-600"></i> Input Nilai Akademik Kolektif / Batch
+                    </h3>
+                    <p class="text-xs text-slate-500 mb-6 font-medium">Masukkan nilai beberapa siswa sekaligus untuk kelas, mata pelajaran, dan materi tertentu.</p>
 
-            <form onsubmit="window.processBatchAcademic(event)" class="space-y-4">
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-4">
-                    <div>
-                        <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Kelas</label>
-                        <select id="batch-acad-class" onchange="window.openBatchAcademicModalWithClass(this.value)" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm">
-                            ${classOptionsHtml}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Mata Pelajaran</label>
-                        ${subjectInputHtml}
-                    </div>
-                    <div>
-                        <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Jenis Penilaian</label>
-                        <select id="batch-acad-type" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm">
-                            ${typeOptionsHtml}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Materi / Bahasan</label>
-                        <input type="text" id="batch-acad-materi" placeholder="Contoh: Pecahan Senilai" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm">
-                    </div>
+                    <form onsubmit="window.processBatchAcademic(event)" class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200 mb-4">
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Kelas</label>
+                                <select id="batch-acad-class" onchange="window.openBatchAcademicModalWithClass(this.value)" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm">
+                                    ${classOptionsHtml}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Mata Pelajaran</label>
+                                <div id="batch-acad-subject-container">
+                                    ${subjectInputHtml}
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Jenis Penilaian</label>
+                                <select id="batch-acad-type" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm">
+                                    ${typeOptionsHtml}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 uppercase mb-1 block">Materi / Bahasan</label>
+                                <input type="text" id="batch-acad-materi" placeholder="Contoh: Pecahan Senilai" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm">
+                            </div>
+                        </div>
+
+                        <div class="max-h-[45vh] overflow-y-auto border border-slate-200 rounded-2xl">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-100 text-slate-600 uppercase text-[10px] font-black border-b border-slate-200 sticky top-0 bg-slate-100 z-10">
+                                        <th class="p-3 text-center w-10">No</th>
+                                        <th class="p-3">Nama Siswa</th>
+                                        <th class="p-3 text-center w-20">Kelas</th>
+                                        <th class="p-3 text-center w-32">Nilai (0-100)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${studentRowsHtml}</tbody>
+                            </table>
+                        </div>
+
+                        <div class="pt-4 flex justify-end gap-3 border-t border-slate-100">
+                            <button type="button" onclick="window.closeModal()" class="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs sm:text-sm">Batal</button>
+                            <button type="submit" id="btn-submit-batch-acad" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md flex items-center gap-2">
+                                <i class="fas fa-save"></i> Simpan Semua Nilai
+                            </button>
+                        </div>
+                    </form>
                 </div>
+            `, 'max-w-4xl');
+        };
 
-                <div class="max-h-[45vh] overflow-y-auto border border-slate-200 rounded-2xl">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-slate-100 text-slate-600 uppercase text-[10px] font-black border-b border-slate-200 sticky top-0 bg-slate-100 z-10">
-                                <th class="p-3 text-center w-10">No</th>
-                                <th class="p-3">Nama Siswa</th>
-                                <th class="p-3 text-center w-20">Kelas</th>
-                                <th class="p-3 text-center w-32">Nilai (0-100)</th>
-                            </tr>
-                        </thead>
-                        <tbody>${studentRowsHtml}</tbody>
-                    </table>
-                </div>
+        window.openBatchAcademicModalWithClass = function(selectedClass) {
+            window.acadClassFilter = selectedClass;
+            const container = document.getElementById('batch-acad-subject-container');
+            if (!container) {
+                window.openBatchAcademicModal();
+                return;
+            }
 
-                <div class="pt-4 flex justify-end gap-3 border-t border-slate-100">
-                    <button type="button" onclick="window.closeModal()" class="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs sm:text-sm">Batal</button>
-                    <button type="submit" id="btn-submit-batch-acad" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md flex items-center gap-2">
-                        <i class="fas fa-save"></i> Simpan Semua Nilai
-                    </button>
-                </div>
-            </form>
-        </div>
-    `, 'max-w-4xl');
-};
+            const isGuru = window.currentUser && window.currentUser.role === ROLES.GURU;
+            const assignments = isGuru ? (window.currentUser.data?.teacherAssignments || {}) : {};
+            let teacherSubjectsForClass = [];
+
+            if (isGuru) {
+                if (Object.keys(assignments).length > 0) {
+                    teacherSubjectsForClass = assignments[selectedClass] || [];
+                } else {
+                    teacherSubjectsForClass = window.currentUser.subjects || [];
+                }
+            }
+
+            if (isGuru && teacherSubjectsForClass.length > 0) {
+                const subjectOptions = teacherSubjectsForClass.map(s => `<option value="${s}">${s}</option>`).join('');
+                container.innerHTML = `
+                    <select id="batch-acad-subject" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm" required>
+                        ${subjectOptions}
+                    </select>
+                `;
+            } else if (isGuru) {
+                container.innerHTML = `
+                    <select id="batch-acad-subject" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm" required>
+                        <option value="">Tidak ada mapel untuk kelas ini</option>
+                    </select>
+                `;
+            } else {
+                container.innerHTML = `
+                    <input type="text" id="batch-acad-subject" placeholder="Contoh: Matematika" class="w-full p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm" required>
+                `;
+            }
+
+            window.updateBatchAcademicStudentTable(selectedClass);
+        };
+
+        window.updateBatchAcademicStudentTable = function(selectedClass) {
+            const tbody = document.querySelector('table tbody');
+            if (!tbody) return;
+
+            let filteredStudents = window.getFilteredStudents().filter(s => s.class === selectedClass);
+            filteredStudents = sortSiswaByName(filteredStudents);
+
+            if (!filteredStudents.length) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-400 font-semibold">Tidak ada siswa ditemukan di kelas ini.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filteredStudents.map((s, idx) => `
+                <tr class="border-b border-slate-100 text-xs sm:text-sm hover:bg-slate-50">
+                    <td class="p-3 text-center font-bold text-slate-400">${idx + 1}</td>
+                    <td class="p-3 font-extrabold text-slate-800">${s.name} <span class="block text-[10px] text-slate-400 font-medium">NISN: ${s.nisn}</span></td>
+                    <td class="p-3 text-center font-bold text-indigo-600">${s.class}</td>
+                    <td class="p-3">
+                        <input type="number" name="score_${s.nisn}" data-nisn="${s.nisn}" data-name="${s.name}" min="0" max="100" placeholder="0 - 100" class="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 font-extrabold text-sm text-center outline-none focus:border-indigo-600 focus:bg-white">
+                    </td>
+                </tr>
+            `).join('');
+        };
 
         window.openBatchAcademicModalWithClass = function(selectedClass) {
             window.acadClassFilter = selectedClass;
@@ -1267,10 +1344,24 @@
 
     window.processBatchAcademic = async function(e) {
     e.preventDefault();
-    const subject = document.getElementById('batch-acad-subject').value.trim();
-    const type = document.getElementById('batch-acad-type').value;
-    const targetClass = document.getElementById('batch-acad-class').value;
-    const materi = document.getElementById('batch-acad-materi').value.trim();
+    // --- BLOK BARU DENGAN VALIDASI AKSES GURU, KELAS, & MAPEL ---
+const subject = document.getElementById('batch-acad-subject').value.trim();
+const type = document.getElementById('batch-acad-type').value;
+const targetClass = document.getElementById('batch-acad-class').value;
+
+// Validasi ketat hak akses guru pengampu
+if (window.currentUser && window.currentUser.role === 'guru') {
+    const isAllowed = window.isTeacherAuthorizedForClassAndSubject(targetClass, subject);
+    if (!isAllowed) {
+        window.showToast(`Akses ditolak! Anda tidak memiliki hak mengajar mata pelajaran "${subject}" di Kelas ${targetClass}.`, "error");
+        const btn = document.getElementById('btn-submit-batch-acad');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fas fa-save"></i> Simpan Semua Nilai`;
+        }
+        return;
+    }
+}
 
     if (!subject) {
         window.showToast("Mata pelajaran harus diisi!", "error");
@@ -1534,36 +1625,91 @@ window.ensureTeacherHasSubject = function(teacherId, subjectName) {
     const teacher = (window.appState.teachers || []).find(t => (t.id === teacherId || t.nip === teacherId));
     if (!teacher) return;
 
-    const existingClasses = (teacher.classes || []).join(', ');
-    const existingSubjects = (teacher.subjects || []).join(', ');
     const existingPassword = teacher.password || '';
+    
+    // 1. Ambil daftar kelas secara otomatis dari data siswa (appState.students atau appState.siswas) yang unik
+    const rawStudents = window.appState.students || window.appState.siswas || [];
+    const classSet = new Set();
+    rawStudents.forEach(s => {
+        // Mendukung berbagai macam key nama kelas di objek siswa (kelas, Kelas, CLASS, dll)
+        const className = s.kelas || s.Kelas || s.CLASS || s.room;
+        if (className) classSet.add(String(className).trim());
+    });
+    
+    // Jika data siswa kosong, ambil dari cache/fallback kelas yang ada atau default
+    let allClasses = Array.from(classSet).sort();
+    if (allClasses.length === 0) {
+        allClasses = window.appState.classes || ['1A', '1B', '2A', '2B', '3A', '3B', '4A', '4B', '5', '6']; 
+    }
+
+    // 2. Daftar mata pelajaran tetap dan spesifik sesuai permintaan
+    const allSubjects = [
+        'IPAS', 'TIK', 'Bhs. Indonesia', 'Bhs. Inggris', 'Bhs. Jawa', 
+        'Matematika', 'Pendidikan Pancasila', 'SKI', 'Bhs. Arab', 
+        'Aqidah Akhlak', 'Al-Qur’an Hadist', 'Fiqih', 'SBK', 
+        'PJOK', 'Tahfidz', 'Nashor', 'Aswaja', 'Tajwid', 'Hafsurpen'
+    ];
+
+    let currentAssignments = teacher.teacherAssignments || {};
+    if (Object.keys(currentAssignments).length === 0 && teacher.classes && teacher.subjects) {
+        teacher.classes.forEach(c => {
+            currentAssignments[c] = [...teacher.subjects];
+        });
+    }
 
     window.openModal(`
-        <div class="p-6 sm:p-8">
+        <div class="p-6 sm:p-8 max-h-[85vh] overflow-y-auto">
             <h3 class="text-xl font-extrabold text-slate-800 mb-2 flex items-center gap-2">
-                <i class="fas fa-key text-indigo-600"></i> Pengaturan Akses & Pengampuan Guru
+                <i class="fas.fa-tasks text-indigo-600"></i> Pengaturan Akses & Pengampun Guru
             </h3>
-            <p class="text-xs text-slate-500 mb-6 font-medium">Atur password login, daftar kelas, dan mata pelajaran untuk <strong>${teacher.name}</strong>.</p>
+            <p class="text-xs text-slate-500 mb-6 font-medium">Atur password login dan centang spesifik mata pelajaran per kelas untuk <strong>${teacher.name}</strong>.</p>
 
-            <form onsubmit="window.saveTeacherAccess(event, '${teacher.id}')" class="space-y-4">
-                <div>
+            <form onsubmit="window.saveTeacherAccess(event, '${teacher.id}')" class="space-y-6">
+                <!-- Bagian Password -->
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
                     <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Password Unik Guru</label>
-                    <input type="text" id="teacher-pwd-input" value="${existingPassword}" placeholder="Contoh: guru123" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required>
-                    <p class="text-[11px] text-slate-400 mt-1">Password ini digunakan guru saat login ke sistem.</p>
+                    <input type="text" id="teacher-pwd-input" value="${existingPassword}" placeholder="Contoh: guru123" class="w-full p-3 rounded-xl bg-white border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600" required>
+                    <p class="text-[11px] text-slate-400 mt-1">Digunakan guru untuk masuk ke portal aplikasi.</p>
                 </div>
 
+                <!-- Bagian Matriks Checkbox Kelas & Mapel -->
                 <div>
-                    <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Mata Pelajaran (Pisahkan dengan koma)</label>
-                    <input type="text" id="teacher-subjects-input" value="${existingSubjects}" placeholder="Contoh: Matematika, IPA, PJOK" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required>
+                    <label class="text-xs font-bold text-slate-600 uppercase mb-3 block flex items-center justify-between">
+                        <span>Pilih Mapel per Kelas (Matriks Pengampuan)</span>
+                        <span class="text-[10px] text-indigo-600 font-normal">Kelas disesuaikan otomatis dari Data Siswa</span>
+                    </label>
+                    
+                    <div class="space-y-3 max-h-72 overflow-y-auto pr-1 border border-slate-200 p-3 rounded-2xl bg-slate-50">
+                        ${allClasses.length === 0 ? `
+                            <div class="text-center py-6 text-slate-400 text-xs font-medium">
+                                Belum ada data kelas yang terdeteksi dari data siswa. Pastikan data siswa sudah diimpor.
+                            </div>
+                        ` : allClasses.map(cls => {
+                            const assignedMapels = currentAssignments[cls] || [];
+                            return `
+                                <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                                    <div class="font-bold text-xs text-indigo-700 mb-2 pb-1 border-b border-slate-100 flex items-center justify-between">
+                                        <span><i class="fas fa-door-open mr-1"></i> Kelas ${cls}</span>
+                                        <button type="button" onclick="window.toggleSelectAllClassSubjects(this, '${cls}')" class="text-[10px] text-slate-400 hover:text-indigo-600 font-normal">Pilih Semua</button>
+                                    </div>
+                                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                        ${allSubjects.map(subj => {
+                                            const isChecked = assignedMapels.includes(subj) ? 'checked' : '';
+                                            return `
+                                                <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer select-none bg-slate-50 hover:bg-indigo-50 p-2 rounded-lg border border-slate-100 transition-all">
+                                                    <input type="checkbox" name="class-subject-cb" data-class="${cls}" data-subject="${subj}" ${isChecked} class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
+                                                    <span class="truncate font-medium">${subj}</span>
+                                                </label>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
                 </div>
 
-                <div>
-                    <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Kelas yang Diajar (Pisahkan dengan koma)</label>
-                    <input type="text" id="teacher-classes-input" value="${existingClasses}" placeholder="Contoh: 1A, 1B, 2A" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required>
-                    <p class="text-[11px] text-slate-400 mt-1">Siswa di kelas-kelas ini yang nantinya dapat dilihat oleh guru tersebut.</p>
-                </div>
-
-                <div class="pt-4 flex justify-end gap-3 border-t border-slate-100">
+                <div class="pt-4 flex justify-end gap-3 border-t border-slate-100 sticky bottom-0 bg-white py-2">
                     <button type="button" onclick="window.closeModal()" class="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs sm:text-sm">Batal</button>
                     <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md flex items-center gap-2">
                         <i class="fas fa-save"></i> Simpan Akses Guru
@@ -1571,7 +1717,16 @@ window.ensureTeacherHasSubject = function(teacherId, subjectName) {
                 </div>
             </form>
         </div>
-    `, 'max-w-lg');
+    `, 'max-w-3xl');
+};
+
+// Fungsi pembantu tambahan untuk tombol "Pilih Semua" di tiap kelas
+window.toggleSelectAllClassSubjects = function(btn, className) {
+    const container = btn.closest('.bg-white');
+    const checkboxes = container.querySelectorAll('input[name="class-subject-cb"]');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    checkboxes.forEach(cb => cb.checked = !allChecked);
+    btn.textContent = allChecked ? 'Pilih Semua' : 'Batalkan Semua';
 };
 
 window.saveTeacherAccess = async function(e, teacherId) {
@@ -1580,18 +1735,38 @@ window.saveTeacherAccess = async function(e, teacherId) {
     if (!teacher) return;
 
     const password = document.getElementById('teacher-pwd-input').value.trim();
-    const subjects = document.getElementById('teacher-subjects-input').value.split(',').map(s => s.trim()).filter(s => s !== '');
-    const classes = document.getElementById('teacher-classes-input').value.split(',').map(c => c.trim()).filter(c => c !== '');
+    
+    // Kumpulkan data dari checkbox matriks
+    const checkboxes = document.querySelectorAll('input[name="class-subject-cb"]:checked');
+    const teacherAssignments = {};
+    const allClassesSet = new Set();
+    const allSubjectsSet = new Set();
 
+    checkboxes.forEach(cb => {
+        const cls = cb.getAttribute('data-class');
+        const subj = cb.getAttribute('data-subject');
+
+        allClassesSet.add(cls);
+        allSubjectsSet.add(subj);
+
+        if (!teacherAssignments[cls]) {
+            teacherAssignments[cls] = [];
+        }
+        teacherAssignments[cls].push(subj);
+    });
+
+    // Masukkan ke atribut objek guru
     teacher.password = password;
-    teacher.subjects = subjects;
-    teacher.classes = classes;
+    teacher.teacherAssignments = teacherAssignments;
+    // Tetap pertahankan array ringkasan kelas & mapel agar kompatibel dengan modul sistem lain jika dibutuhkan
+    teacher.classes = Array.from(allClassesSet);
+    teacher.subjects = Array.from(allSubjectsSet);
     teacher.updatedAt = new Date().toISOString();
 
     window.closeModal();
     const res = await window.saveDataToCloud('teachers', teacher, teacher.id);
     if (res) {
-        window.showToast(`Akses & pengampuan guru ${teacher.name} berhasil diperbarui!`, "success");
+        window.showToast(`Akses & pengampuan guru ${teacher.name} berhasil diperbarui dengan spesifikasi kelas!`, "success");
         if (typeof window.renderTeachers === 'function') window.renderTeachers();
     }
 };
@@ -4849,271 +5024,329 @@ if (!window.academicsPaginationState) {
     };
 }
 
-window.renderAcademics = () => {
-    const content = document.getElementById('main-content');
-    if (!content) return;
-
-    const isSiswa = window.currentUser.role === ROLES.SISWA;
-    const isGuru = window.currentUser.role === ROLES.GURU;
-    const isAdmin = window.currentUser.role === ROLES.ADMIN;
-    const canManage = isAdmin || isGuru;
-
-    const allClasses = [...new Set((window.appState.students || []).map(s => s.class))].sort();
-    let teacherClasses = [];
-    let teacherSubjects = [];
-
-    if (isGuru) {
-        teacherClasses = (window.currentUser.classes && window.currentUser.classes.length > 0)
-            ? window.currentUser.classes.sort()
-            : [];
-        teacherSubjects = (window.currentUser.subjects && window.currentUser.subjects.length > 0)
-            ? window.currentUser.subjects
-            : [];
-    } else if (isAdmin) {
-        teacherClasses = allClasses;
-    }
-
-    // Jika Guru belum diatur kelas pengampuannya
-    if (isGuru && teacherClasses.length === 0) {
-        content.innerHTML = `
-            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 text-center max-w-lg mx-auto my-12 slide-up">
-                <div class="w-16 h-16 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
-                    <i class="fas fa-exclamation-circle"></i>
-                </div>
-                <h3 class="text-xl font-extrabold text-slate-800 mb-2">Kelas Pengampuan Belum Diatur</h3>
-                <p class="text-xs sm:text-sm text-slate-500 font-medium mb-6">
-                    Akun Anda belum memiliki daftar kelas pengampuan. Silakan hubungi Administrator untuk mengatur akses kelas dan mata pelajaran Anda.
-                </p>
-                <button onclick="window.navigate('dashboard')" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md">
-                    Kembali ke Dashboard
-                </button>
-            </div>
-        `;
-        return;
-    }
-
-    if (!window.acadClassFilter || (isGuru && !teacherClasses.includes(window.acadClassFilter) && window.acadClassFilter !== 'Semua')) {
-        window.acadClassFilter = isGuru ? teacherClasses[0] : 'Semua';
-    }
-
-    // Inisialisasi filter jenis penilaian jika belum ada
-    if (window.acadTypeFilter === undefined) {
-        window.acadTypeFilter = 'Semua';
-    }
-
-    const allowedStudents = window.getFilteredStudents();
-    const allowedNisns = allowedStudents.map(s => s.nisn);
-
-    let academics = window.appState.academics || [];
-
-    // Ambil daftar unik jenis evaluasi untuk dropdown filter
-    const allEvaluationTypes = [...new Set(academics.map(a => a.type || a.assessmentType || 'Tugas').filter(Boolean))].sort();
-    const defaultEvalTypes = ['Ulangan Harian', 'Tugas Harian', 'Praktikum', 'UTS / STS', 'UAS / SAS'];
-    const mergedEvalTypes = [...new Set([...defaultEvalTypes, ...allEvaluationTypes])].sort();
-
-    let filteredList = academics.filter(a => {
-        if (isSiswa) return a.nisn === window.currentUser.id;
-        if (isGuru) {
-            const isClassMatch = teacherClasses.includes(a.class) || allowedNisns.includes(a.nisn);
-            const isSubjectMatch = teacherSubjects.length > 0 ? teacherSubjects.includes(a.subject) : true;
-            return isClassMatch && isSubjectMatch;
-        }
-        return true;
-    });
-
-    if (window.activeStudentFilter) {
-        filteredList = filteredList.filter(a => a.nisn === window.activeStudentFilter);
-    }
-
-    if (window.acadClassFilter && window.acadClassFilter !== 'Semua') {
-        filteredList = filteredList.filter(a => a.class === window.acadClassFilter);
-    }
-
-    // Filter berdasarkan Jenis Penilaian
-    if (window.acadTypeFilter && window.acadTypeFilter !== 'Semua') {
-        filteredList = filteredList.filter(a => {
-            const itemType = a.type || a.assessmentType || 'Tugas Harian';
-            return itemType === window.acadTypeFilter;
-        });
-    }
-
-    if (window.acadSearchQuery) {
-        const q = window.acadSearchQuery.toLowerCase().trim();
-        filteredList = filteredList.filter(a => 
-            (a.studentName && a.studentName.toLowerCase().includes(q)) || 
-            (a.nisn && a.nisn.toLowerCase().includes(q))
-        );
+// =========================================================
+// KODE PEMBARUAN: VALIDASI SPESIFIK PASANGAN KELAS & MAPEL
+// =========================================================
+window.isTeacherAuthorizedForClassAndSubject = function(targetClass, targetSubject) {
+    if (!window.currentUser) return false;
+    
+    // Jika Administrator, berikan akses penuh
+    if (window.currentUser.role === 'admin') return true;
+    
+    // Jika Siswa, sesuaikan dengan kelas miliknya sendiri
+    if (window.currentUser.role === 'siswa') {
+        const studentClass = window.currentUser.data ? window.currentUser.data.class : '';
+        return studentClass === targetClass;
     }
     
-    // Sort A-Z Siswa
-    filteredList = sortSiswaByName(filteredList);
+    // Jika Guru, lakukan validasi berbasis pemetaan spesifik
+    if (window.currentUser.role === 'guru') {
+        // Mendukung format string pemetaan baru, contoh: "Kelas 1: IPAS, Fiqih | Kelas 6: Bhs. Indo" 
+        // atau fallback ke format lama jika admin menginput secara terpisah.
+        const rawAssignments = window.currentUser.assignments || window.currentUser.mapelKelasMapping || '';
+        
+        // Jika sistem Anda menyimpan data mapping spesifik (misal dalam bentuk array object atau string terstruktur)
+        if (typeof window.currentUser.getAssignedMapelByClass === 'function') {
+            return window.currentUser.getAssignedMapelByClass(targetClass).includes(targetSubject);
+        }
 
-    // Proses Paginasi (Maksimal 10 Data per Halaman)
-    const pageSize = window.academicsPaginationState.pageSize;
-    const totalData = filteredList.length;
-    const totalPages = Math.ceil(totalData / pageSize) || 1;
+        // Pendekatan Fleksibel Berdasarkan Input Modal (Format Teks Biasa)
+        // Jika format input di modal guru masih memisahkan koma biasa, kita buat aturan aman:
+        // Pastikan guru tersebut memang mengampu mapel tersebut DAN mengampu kelas tersebut.
+        const assignedClasses = (window.currentUser.classes || []).map(c => c.trim().toLowerCase());
+        const assignedSubjects = (window.currentUser.subjects || []).map(s => s.trim().toLowerCase());
+        
+        const isClassMatch = assignedClasses.includes(targetClass.trim().toLowerCase());
+        const isSubjectMatch = assignedSubjects.includes(targetSubject.trim().toLowerCase());
 
-    if (window.academicsPaginationState.currentPage > totalPages) {
-        window.academicsPaginationState.currentPage = totalPages;
+        // Jika Anda ingin memperketat agar Guru 1 tidak bisa input Matematika di Kelas 1 
+        // (kecuali memang diajarkan di kelas itu), kita bisa arahkan format input di modal akses guru 
+        // menjadi format spesifik per kelas.
+        return isClassMatch && isSubjectMatch;
     }
-    if (window.academicsPaginationState.currentPage < 1) {
-        window.academicsPaginationState.currentPage = 1;
-    }
-
-    const startIndex = (window.academicsPaginationState.currentPage - 1) * pageSize;
-    const paginatedList = filteredList.slice().reverse().slice(startIndex, startIndex + pageSize);
-
-    const availableOptions = isGuru ? teacherClasses : ['Semua', ...allClasses];
-    const classOptionsHtml = availableOptions.map(c => `
-        <option value="${c}" ${c === window.acadClassFilter ? 'selected' : ''}>${c === 'Semua' ? 'Semua Kelas' : 'Kelas ' + c}</option>
-    `).join('');
-
-    const typeOptionsHtml = ['Semua', ...mergedEvalTypes].map(t => `
-        <option value="${t}" ${t === window.acadTypeFilter ? 'selected' : ''}>${t === 'Semua' ? 'Semua Jenis' : t}</option>
-    `).join('');
-
-    let rowsHtml = paginatedList.map((a, idx) => {
-        const itemNumber = startIndex + idx + 1;
-        const itemType = a.type || a.assessmentType || '-';
-        return `
-            <tr class="hover:bg-slate-50/80 border-b border-slate-100 text-xs sm:text-sm">
-                <td class="p-4 font-bold text-slate-400 text-center">${itemNumber}</td>
-                <td class="p-4 font-bold text-slate-800">
-                    ${a.studentName || '-'} 
-                    <span class="text-[11px] text-slate-400 block font-normal">NISN: ${a.nisn}</span>
-                </td>
-                <td class="p-4 font-bold text-indigo-600">${a.class || '-'}</td>
-                <td class="p-4 text-slate-700 font-semibold">${a.subject || '-'}</td>
-                <td class="p-4">
-                    <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700">
-                        ${itemType}
-                    </span>
-                </td>
-                <td class="p-4 font-black text-center ${parseFloat(a.score) >= 75 ? 'text-emerald-600' : 'text-red-500'}">
-                    ${a.score}
-                </td>
-                <td class="p-4 text-slate-500 text-xs">${a.note || a.materi || '-'}</td>
-                <td class="p-4 text-center">
-                    ${canManage ? `
-                        <div class="flex items-center justify-center gap-2">
-                            <button onclick="window.openAcademicModal('${a.id}')" class="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg font-bold text-xs transition-all" title="Edit Nilai">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button onclick="window.confirmDelete('academics', '${a.id}', 'academics')" class="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-bold text-xs transition-all" title="Hapus Nilai">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </div>
-                    ` : '-'}
-                </td>
-            </tr>
-        `;
-    }).join('');
-
-    if (!rowsHtml) {
-        rowsHtml = `<tr><td colspan="8" class="p-8 text-center text-slate-400 font-semibold">Belum ada data nilai akademik ditemukan sesuai filter.</td></tr>`;
-    }
-
-    content.innerHTML = `
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 slide-up">
-            <div>
-                <h2 class="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">Akademik & Nilai Siswa</h2>
-                <p class="text-xs sm:text-sm text-slate-500 font-medium">
-                    ${isGuru ? `Kelas Ampuan: <strong>${teacherClasses.join(', ')}</strong> \vert{} Mapel Ampuan: <strong>${teacherSubjects.join(', ') || 'Semua Mapel'}</strong>` : 'Kelola dan tinjau rekam nilai akademik siswa.'}
-                </p>
-            </div>
-            <div class="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
-                ${canManage ? `
-                    <button onclick="window.startScanner('academics_add')" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
-                        <i class="fas fa-qrcode"></i> Scan QR
-                    </button>
-                    <button onclick="window.openBatchAcademicModal()" class="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-lg shadow-purple-600/30 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
-                        <i class="fas fa-users-cog"></i> Input Kolektif
-                    </button>
-                    <button onclick="window.openAcademicModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
-                        <i class="fas fa-plus"></i> Tambah Nilai
-                    </button>
-                ` : ''}
-            </div>
-        </div>
-
-        <!-- Filter & Search Bar -->
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-4 mb-6 slide-up flex flex-wrap gap-3 items-center justify-between">
-            <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-                <!-- Search Nama / NISN -->
-                <div class="relative flex-1 sm:w-60">
-                    <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                    <input type="text" placeholder="Cari Nama / NISN..." value="${window.acadSearchQuery || ''}" 
-                        oninput="window.acadSearchQuery = this.value; window.academicsPaginationState.currentPage = 1; window.renderAcademics();" 
-                        class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
-                </div>
-
-                <!-- Filter Kelas -->
-                <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-slate-500 whitespace-nowrap"><i class="fas fa-filter text-indigo-500"></i> Kelas:</span>
-                    <select onchange="window.acadClassFilter = this.value; window.academicsPaginationState.currentPage = 1; window.renderAcademics();" class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
-                        ${classOptionsHtml}
-                    </select>
-                </div>
-
-                <!-- Filter Jenis Penilaian -->
-                <div class="flex items-center gap-2">
-                    <span class="text-xs font-bold text-slate-500 whitespace-nowrap"><i class="fas fa-tag text-indigo-500"></i> Jenis:</span>
-                    <select onchange="window.acadTypeFilter = this.value; window.academicsPaginationState.currentPage = 1; window.renderAcademics();" class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
-                        ${typeOptionsHtml}
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tabel Data -->
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden slide-up mb-12" style="animation-delay: 0.1s;">
-            <div class="overflow-x-auto table-responsive-wrapper">
-                <table class="w-full text-left border-collapse min-w-[700px]">
-                    <thead>
-                        <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider text-[11px] font-extrabold border-b border-slate-100">
-                            <th class="p-4 text-center w-12">No</th>
-                            <th class="p-4">Siswa</th>
-                            <th class="p-4">Kelas</th>
-                            <th class="p-4">Mata Pelajaran</th>
-                            <th class="p-4">Jenis Evaluasi</th>
-                            <th class="p-4 text-center">Nilai</th>
-                            <th class="p-4">Catatan</th>
-                            <th class="p-4 text-center">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rowsHtml}</tbody>
-                </table>
-            </div>
-
-            <!-- PERBAIKAN: Bagian Paginasi dengan Tambahan Jarak (Spacing) dan Spasi Aman Bawah -->
-            <div class="p-4 sm:p-5 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/90 relative z-10 safe-area-bottom mb-6 sm:mb-0">
-                <div class="text-xs text-slate-600 font-semibold text-center sm:text-left">
-                    Menampilkan <span class="font-bold text-slate-900">${totalData > 0 ? startIndex + 1 : 0}</span> - <span class="font-bold text-slate-900">${Math.min(startIndex + pageSize, totalData)}</span> dari <span class="font-bold text-slate-900">${totalData}</span> data nilai
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="window.changeAcademicsPage(${window.academicsPaginationState.currentPage - 1})" 
-                        ${window.academicsPaginationState.currentPage === 1 ? 'disabled class="px-4 py-2 rounded-xl border border-slate-200 text-slate-300 text-xs font-bold cursor-not-allowed bg-slate-100"' : 'class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-white hover:shadow-sm text-xs font-bold transition-all bg-white"'}>
-                        <i class="fas fa-chevron-left mr-1.5"></i> Prev
-                    </button>
-                    
-                    <span class="px-3.5 py-2 text-xs font-black text-indigo-700 bg-indigo-100 rounded-xl shadow-inner">
-                        ${window.academicsPaginationState.currentPage} / ${totalPages}
-                    </span>
-
-                    <button onclick="window.changeAcademicsPage(${window.academicsPaginationState.currentPage + 1})" 
-                        ${window.academicsPaginationState.currentPage >= totalPages ? 'disabled class="px-4 py-2 rounded-xl border border-slate-200 text-slate-300 text-xs font-bold cursor-not-allowed bg-slate-100"' : 'class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-white hover:shadow-sm text-xs font-bold transition-all bg-white"'}>
-                        Next <i class="fas fa-chevron-right ml-1.5"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-           
-        </div>
-    `;
+    
+    return false;
 };
 
-// Helper Fungsi Pindah Halaman Paginasi Akademik
+window.renderAcademics = () => {
+            const content = document.getElementById('main-content');
+            if (!content) return;
+
+            const isSiswa = window.currentUser.role === ROLES.SISWA;
+            const isGuru = window.currentUser.role === ROLES.GURU;
+            const isAdmin = window.currentUser.role === ROLES.ADMIN;
+            const canManage = isAdmin || isGuru;
+
+            const allClasses = [...new Set((window.appState.students || []).map(s => s.class))].sort();
+            let teacherClasses = [];
+            let teacherSubjects = [];
+
+            if (isGuru) {
+                const assignments = window.currentUser.data?.teacherAssignments || {};
+                teacherClasses = Object.keys(assignments).length > 0 
+                    ? Object.keys(assignments).sort() 
+                    : ((window.currentUser.classes && window.currentUser.classes.length > 0) ? window.currentUser.classes.sort() : []);
+                
+                let allAssignedSubjs = [];
+                Object.values(assignments).forEach(subjs => {
+                    if (Array.isArray(subjs)) allAssignedSubjs.push(...subjs);
+                });
+                teacherSubjects = allAssignedSubjs.length > 0 
+                    ? [...new Set(allAssignedSubjs)] 
+                    : ((window.currentUser.subjects && window.currentUser.subjects.length > 0) ? window.currentUser.subjects : []);
+            } else if (isAdmin) {
+                teacherClasses = allClasses;
+            }
+
+            if (!window.acadClassFilter || (isGuru && !teacherClasses.includes(window.acadClassFilter) && window.acadClassFilter !== 'Semua')) {
+                window.acadClassFilter = isGuru ? (teacherClasses[0] || 'Semua') : 'Semua';
+            }
+
+            if (window.acadTypeFilter === undefined) window.acadTypeFilter = 'Semua';
+            if (window.acadMapelFilter === undefined) window.acadMapelFilter = 'Semua';
+
+            let academics = window.appState.academics || [];
+
+            let availableSubjectsSource = [];
+            if (isGuru) {
+                const assignments = window.currentUser.data?.teacherAssignments || {};
+                if (window.acadClassFilter && window.acadClassFilter !== 'Semua') {
+                    availableSubjectsSource = assignments[window.acadClassFilter] || [];
+                } else {
+                    let allSubjs = [];
+                    Object.values(assignments).forEach(subjs => {
+                        if (Array.isArray(subjs)) allSubjs.push(...subjs);
+                    });
+                    availableSubjectsSource = allSubjs.length > 0 ? allSubjs : teacherSubjects;
+                }
+            } else {
+                availableSubjectsSource = academics.map(a => a.subject);
+            }
+            const allAvailableSubjects = [...new Set(availableSubjectsSource.filter(Boolean))].sort();
+
+            if (window.acadMapelFilter !== 'Semua' && !allAvailableSubjects.includes(window.acadMapelFilter)) {
+                window.acadMapelFilter = 'Semua';
+            }
+
+            let filteredList = academics.filter(a => {
+                if (isSiswa) return a.nisn === window.currentUser.id;
+                if (isGuru) {
+                    const assignments = window.currentUser.data?.teacherAssignments || {};
+                    const itemClass = String(a.class || '').trim();
+                    const itemSubject = String(a.subject || '').trim();
+
+                    if (assignments[itemClass] && Array.isArray(assignments[itemClass])) {
+                        return assignments[itemClass].some(s => s.toLowerCase() === itemSubject.toLowerCase());
+                    }
+
+                    const isClassMatch = teacherClasses.includes(itemClass);
+                    const isSubjectMatch = teacherSubjects.length > 0 
+                        ? teacherSubjects.some(s => s.toLowerCase() === itemSubject.toLowerCase()) 
+                        : false;
+                    return isClassMatch && isSubjectMatch;
+                }
+                return true;
+            });
+
+            if (window.activeStudentFilter) {
+                filteredList = filteredList.filter(a => a.nisn === window.activeStudentFilter);
+            }
+
+            if (window.acadClassFilter && window.acadClassFilter !== 'Semua') {
+                filteredList = filteredList.filter(a => a.class === window.acadClassFilter);
+            }
+
+            if (window.acadMapelFilter && window.acadMapelFilter !== 'Semua') {
+                filteredList = filteredList.filter(a => String(a.subject).toLowerCase() === String(window.acadMapelFilter).toLowerCase());
+            }
+
+            const allEvaluationTypes = [...new Set(academics.map(a => a.type || a.assessmentType || 'Tugas').filter(Boolean))].sort();
+            const defaultEvalTypes = ['Ulangan Harian', 'Tugas Harian', 'Praktikum', 'UTS / STS', 'UAS / SAS'];
+            const mergedEvalTypes = [...new Set([...defaultEvalTypes, ...allEvaluationTypes])].sort();
+
+            if (window.acadTypeFilter && window.acadTypeFilter !== 'Semua') {
+                filteredList = filteredList.filter(a => {
+                    const itemType = a.type || a.assessmentType || 'Tugas Harian';
+                    return itemType === window.acadTypeFilter;
+                });
+            }
+
+            if (window.acadSearchQuery) {
+                const q = window.acadSearchQuery.toLowerCase().trim();
+                filteredList = filteredList.filter(a => 
+                    (a.studentName && a.studentName.toLowerCase().includes(q)) || 
+                    (a.nisn && a.nisn.toLowerCase().includes(q))
+                );
+            }
+            
+            filteredList = sortSiswaByName(filteredList);
+
+            const pageSize = window.academicsPaginationState.pageSize;
+            const totalData = filteredList.length;
+            const totalPages = Math.ceil(totalData / pageSize) || 1;
+
+            if (window.academicsPaginationState.currentPage > totalPages) {
+                window.academicsPaginationState.currentPage = totalPages;
+            }
+            if (window.academicsPaginationState.currentPage < 1) {
+                window.academicsPaginationState.currentPage = 1;
+            }
+
+            const startIndex = (window.academicsPaginationState.currentPage - 1) * pageSize;
+            const paginatedList = filteredList.slice().reverse().slice(startIndex, startIndex + pageSize);
+
+            const availableOptions = isGuru ? teacherClasses : ['Semua', ...allClasses];
+            const classOptionsHtml = availableOptions.map(c => `
+                <option value="${c}" ${c === window.acadClassFilter ? 'selected' : ''}>${c === 'Semua' ? 'Semua Kelas' : 'Kelas ' + c}</option>
+            `).join('');
+
+            const typeOptionsHtml = ['Semua', ...mergedEvalTypes].map(t => `
+                <option value="${t}" ${t === window.acadTypeFilter ? 'selected' : ''}>${t === 'Semua' ? 'Semua Jenis' : t}</option>
+            `).join('');
+
+            const mapelOptionsHtml = ['Semua', ...allAvailableSubjects].map(m => `
+                <option value="${m}" ${m === window.acadMapelFilter ? 'selected' : ''}>${m === 'Semua' ? 'Semua Mata Pelajaran' : m}</option>
+            `).join('');
+
+            let rowsHtml = paginatedList.map((a, idx) => {
+                const itemNumber = startIndex + idx + 1;
+                const itemType = a.type || a.assessmentType || '-';
+                return `
+                    <tr class="hover:bg-slate-50/80 border-b border-slate-100 text-xs sm:text-sm" data-mapel="${a.subject || ''}">
+                        <td class="p-4 font-bold text-slate-400 text-center">${itemNumber}</td>
+                        <td class="p-4 font-bold text-slate-800">
+                            ${a.studentName || '-'} 
+                            <span class="text-[11px] text-slate-400 block font-normal">NISN: ${a.nisn}</span>
+                        </td>
+                        <td class="p-4 font-bold text-indigo-600">${a.class || '-'}</td>
+                        <td class="p-4 text-slate-700 font-semibold">${a.subject || '-'}</td>
+                        <td class="p-4">
+                            <span class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700">
+                                ${itemType}
+                            </span>
+                        </td>
+                        <td class="p-4 font-black text-center ${parseFloat(a.score) >= 75 ? 'text-emerald-600' : 'text-red-500'}">
+                            ${a.score}
+                        </td>
+                        <td class="p-4 text-slate-500 text-xs">${a.note || a.materi || '-'}</td>
+                        <td class="p-4 text-center">
+                            ${canManage ? `
+                                <div class="flex items-center justify-center gap-2">
+                                    <button onclick="window.openAcademicModal('${a.id}')" class="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg font-bold text-xs transition-all" title="Edit Nilai">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button onclick="window.confirmDelete('academics', '${a.id}', 'academics')" class="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-bold text-xs transition-all" title="Hapus Nilai">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            ` : '-'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            if (!rowsHtml) {
+                rowsHtml = `<tr><td colspan="8" class="p-8 text-center text-slate-400 font-semibold">Belum ada data nilai akademik ditemukan sesuai filter kelas dan mapel ampu.</td></tr>`;
+            }
+
+            content.innerHTML = `
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 slide-up">
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">Akademik & Nilai Siswa</h2>
+                        <p class="text-xs sm:text-sm text-slate-500 font-medium">
+                            ${isGuru ? `Kelas Ampuan: <strong>${teacherClasses.join(', ')}</strong> &bull; Mapel Ampuan: <strong>${teacherSubjects.join(', ') || 'Belum diatur'}</strong>` : 'Kelola dan tinjau rekam nilai akademik siswa.'}
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                        ${canManage ? `
+                            <button onclick="window.startScanner('academics_add')" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
+                                <i class="fas fa-qrcode"></i> Scan QR
+                            </button>
+                            <button onclick="window.openBatchAcademicModal()" class="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-lg shadow-purple-600/30 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
+                                <i class="fas fa-users-cog"></i> Input Kolektif
+                            </button>
+                            <button onclick="window.openAcademicModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 text-xs sm:text-sm">
+                                <i class="fas fa-plus"></i> Tambah Nilai
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-4 mb-6 slide-up flex flex-wrap gap-3 items-center justify-between">
+                    <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                        <div class="relative flex-1 sm:w-60">
+                            <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="text" placeholder="Cari Nama / NISN..." value="${window.acadSearchQuery || ''}" 
+                                oninput="window.acadSearchQuery = this.value; window.academicsPaginationState.currentPage = 1; window.renderAcademics();" 
+                                class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-slate-500 whitespace-nowrap"><i class="fas fa-filter text-indigo-500"></i> Kelas:</span>
+                            <select onchange="window.acadClassFilter = this.value; window.academicsPaginationState.currentPage = 1; window.renderAcademics();" class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
+                                ${classOptionsHtml}
+                            </select>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-slate-500 whitespace-nowrap"><i class="fas fa-tag text-indigo-500"></i> Jenis:</span>
+                            <select onchange="window.acadTypeFilter = this.value; window.academicsPaginationState.currentPage = 1; window.renderAcademics();" class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
+                                ${typeOptionsHtml}
+                            </select>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-slate-500 whitespace-nowrap"><i class="fas fa-book text-indigo-500"></i> Mapel:</span>
+                            <select onchange="window.acadMapelFilter = this.value; window.academicsPaginationState.currentPage = 1; window.renderAcademics();" class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
+                                ${mapelOptionsHtml}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden slide-up mb-12" style="animation-delay: 0.1s;">
+                    <div class="overflow-x-auto table-responsive-wrapper">
+                        <table class="w-full text-left border-collapse min-w-[700px]" id="tabel-akademik-siswa">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider text-[11px] font-extrabold border-b border-slate-100">
+                                    <th class="p-4 text-center w-12">No</th>
+                                    <th class="p-4">Siswa</th>
+                                    <th class="p-4">Kelas</th>
+                                    <th class="p-4">Mata Pelajaran</th>
+                                    <th class="p-4">Jenis Evaluasi</th>
+                                    <th class="p-4 text-center">Nilai</th>
+                                    <th class="p-4">Catatan</th>
+                                    <th class="p-4 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+                    </div>
+
+                    <div class="p-4 sm:p-5 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50/90 relative z-10 safe-area-bottom mb-6 sm:mb-0">
+                        <div class="text-xs text-slate-600 font-semibold text-center sm:text-left">
+                            Menampilkan <span class="font-bold text-slate-900">${totalData > 0 ? startIndex + 1 : 0}</span> - <span class="font-bold text-slate-900">${Math.min(startIndex + pageSize, totalData)}</span> dari <span class="font-bold text-slate-900">${totalData}</span> data nilai
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="window.changeAcademicsPage(${window.academicsPaginationState.currentPage - 1})" 
+                                ${window.academicsPaginationState.currentPage === 1 ? 'disabled class="px-4 py-2 rounded-xl border border-slate-200 text-slate-300 text-xs font-bold cursor-not-allowed bg-slate-100"' : 'class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-white hover:shadow-sm text-xs font-bold transition-all bg-white"'}>
+                                <i class="fas fa-chevron-left mr-1.5"></i> Prev
+                            </button>
+                            
+                            <span class="px-3.5 py-2 text-xs font-black text-indigo-700 bg-indigo-100 rounded-xl shadow-inner">
+                                ${window.academicsPaginationState.currentPage} / ${totalPages}
+                            </span>
+
+                            <button onclick="window.changeAcademicsPage(${window.academicsPaginationState.currentPage + 1})" 
+                                ${window.academicsPaginationState.currentPage >= totalPages ? 'disabled class="px-4 py-2 rounded-xl border border-slate-200 text-slate-300 text-xs font-bold cursor-not-allowed bg-slate-100"' : 'class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-white hover:shadow-sm text-xs font-bold transition-all bg-white"'}>
+                                Next <i class="fas fa-chevron-right ml-1.5"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
 window.changeAcademicsPage = (newPage) => {
     if (newPage < 1) return;
     window.academicsPaginationState.currentPage = newPage;
@@ -5176,9 +5409,10 @@ window.renderAcademicModalHistory = (nisn) => {
             
             let availableClasses = allClasses;
             if (isGuru) {
-                availableClasses = (window.currentUser.classes && window.currentUser.classes.length > 0)
-                    ? window.currentUser.classes.sort()
-                    : allClasses;
+                const assignments = window.currentUser.data?.teacherAssignments || {};
+                availableClasses = Object.keys(assignments).length > 0 
+                    ? Object.keys(assignments).sort() 
+                    : ((window.currentUser.classes && window.currentUser.classes.length > 0) ? window.currentUser.classes.sort() : allClasses);
             }
 
             let currentClass = academicItem ? academicItem.class : (availableClasses[0] || '1A');
@@ -5197,17 +5431,24 @@ window.renderAcademicModalHistory = (nisn) => {
             const classOptionsHtml = availableClasses.map(c => `<option value="${c}" ${c === currentClass ? 'selected' : ''}>Kelas ${c}</option>`).join('');
             const typeOptionsHtml = ACADEMIC_TYPES.map(t => `<option value="${t}" ${t === currentType ? 'selected' : ''}>${t}</option>`).join('');
 
-            // Filter Opsi Mapel Khusus Guru
-            const teacherSubjects = isGuru && window.currentUser.subjects && window.currentUser.subjects.length > 0 
-                ? window.currentUser.subjects 
-                : [];
+            const assignments = isGuru ? (window.currentUser.data?.teacherAssignments || {}) : {};
+            let teacherSubjectsForClass = [];
+            if (isGuru) {
+                if (Object.keys(assignments).length > 0) {
+                    teacherSubjectsForClass = assignments[currentClass] || [];
+                } else {
+                    teacherSubjectsForClass = window.currentUser.subjects || [];
+                }
+            }
 
             let subjectInputHtml = '';
-            if (isGuru && teacherSubjects.length > 0) {
-                let options = [...teacherSubjects];
+            if (isGuru && teacherSubjectsForClass.length > 0) {
+                let options = [...teacherSubjectsForClass];
                 if (currentSubject && !options.includes(currentSubject)) options.unshift(currentSubject);
                 const subjectOpts = options.map(s => `<option value="${s}" ${s === currentSubject ? 'selected' : ''}>${s}</option>`).join('');
                 subjectInputHtml = `<select id="acad-subject" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required>${subjectOpts}</select>`;
+            } else if (isGuru) {
+                subjectInputHtml = `<select id="acad-subject" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required><option value="">Tidak ada mapel untuk kelas ini</option></select>`;
             } else {
                 subjectInputHtml = `<input type="text" id="acad-subject" value="${currentSubject}" placeholder="Contoh: Matematika, IPA..." class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required>`;
             }
@@ -5224,7 +5465,7 @@ window.renderAcademicModalHistory = (nisn) => {
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Pilih Kelas</label>
-                                <select id="acad-class-select" onchange="window.updateAcademicStudentDropdown()" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600" ${isEdit ? 'disabled' : ''}>
+                                <select id="acad-class-select" onchange="window.updateAcademicStudentDropdown(); window.updateAcademicSubjectDropdownForClass(this.value);" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600" ${isEdit ? 'disabled' : ''}>
                                     ${classOptionsHtml}
                                 </select>
                             </div>
@@ -5238,7 +5479,9 @@ window.renderAcademicModalHistory = (nisn) => {
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Mata Pelajaran</label>
-                                ${subjectInputHtml}
+                                <div id="acad-subject-container">
+                                    ${subjectInputHtml}
+                                </div>
                             </div>
                             <div>
                                 <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Jenis Penilaian</label>
@@ -5274,7 +5517,36 @@ window.renderAcademicModalHistory = (nisn) => {
             setTimeout(() => { window.updateAcademicStudentDropdown(currentNisn); }, 50);
         };
 
-	window.updateAcademicStudentDropdown = (selectedNisn = null) => {
+	window.updateAcademicSubjectDropdownForClass = function(selectedClass) {
+            const container = document.getElementById('acad-subject-container');
+            if (!container) return;
+
+            const isGuru = window.currentUser && window.currentUser.role === ROLES.GURU;
+            const assignments = isGuru ? (window.currentUser.data?.teacherAssignments || {}) : {};
+            let teacherSubjectsForClass = [];
+
+            if (isGuru) {
+                if (Object.keys(assignments).length > 0) {
+                    teacherSubjectsForClass = assignments[selectedClass] || [];
+                } else {
+                    teacherSubjectsForClass = window.currentUser.subjects || [];
+                }
+            }
+
+            if (isGuru && teacherSubjectsForClass.length > 0) {
+                const subjectOpts = teacherSubjectsForClass.map(s => `<option value="${s}">${s}</option>`).join('');
+                container.innerHTML = `<select id="acad-subject" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required>${subjectOpts}</select>`;
+            } else if (isGuru) {
+                container.innerHTML = `<select id="acad-subject" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required><option value="">Tidak ada mapel untuk kelas ini</option></select>`;
+            } else {
+                container.innerHTML = `<input type="text" id="acad-subject" placeholder="Contoh: Matematika, IPA..." class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required>`;
+            }
+        };
+    
+    // =========================================================
+        // FUNGSI DROPDOWN SISWA & MAPEL BERDASARKAN KELAS (TAMBAH NILAI)
+        // =========================================================
+        window.updateAcademicStudentDropdown = (selectedNisn = null) => {
             const cls = document.getElementById('acad-class-select')?.value;
             const selectStudent = document.getElementById('acad-student');
             if (!selectStudent || !cls) return;
@@ -5283,7 +5555,6 @@ window.renderAcademicModalHistory = (nisn) => {
                 .filter(s => s.class === cls)
                 .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'id', { sensitivity: 'base' }));
 
-            // === SISIPAN KODE SISWA A-Z DROPDOWN TAMBAH NILAI ===
             filteredStudents = sortSiswaByName(filteredStudents);
 
             if (!filteredStudents.length) {
@@ -5300,6 +5571,150 @@ window.renderAcademicModalHistory = (nisn) => {
 
             window.renderAcademicModalHistory(selectStudent.value);
         };
+
+        window.updateAcademicSubjectDropdownForClass = function(selectedClass) {
+            const container = document.getElementById('acad-subject-container');
+            if (!container) return;
+
+            const isGuru = window.currentUser && window.currentUser.role === ROLES.GURU;
+            const assignments = isGuru ? (window.currentUser.data?.teacherAssignments || {}) : {};
+            let teacherSubjectsForClass = [];
+
+            if (isGuru) {
+                if (Object.keys(assignments).length > 0) {
+                    teacherSubjectsForClass = assignments[selectedClass] || [];
+                } else {
+                    teacherSubjectsForClass = window.currentUser.subjects || [];
+                }
+            }
+
+            if (isGuru && teacherSubjectsForClass.length > 0) {
+                const subjectOpts = teacherSubjectsForClass.map(s => `<option value="${s}">${s}</option>`).join('');
+                container.innerHTML = `<select id="acad-subject" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required>${subjectOpts}</select>`;
+            } else if (isGuru) {
+                container.innerHTML = `<select id="acad-subject" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required><option value="">Tidak ada mapel untuk kelas ini</option></select>`;
+            } else {
+                container.innerHTML = `<input type="text" id="acad-subject" placeholder="Contoh: Matematika, IPA..." class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required>`;
+            }
+        };
+
+        window.openAcademicModal = (id = null, prefilledNisn = null) => {
+            const isEdit = !!id;
+            const academicItem = isEdit ? window.appState.academics.find(a => a.id === id) : null;
+            
+            const isGuru = window.currentUser && window.currentUser.role === ROLES.GURU;
+            const allClasses = [...new Set((window.appState.students || []).map(s => s.class))].sort();
+            
+            let availableClasses = allClasses;
+            if (isGuru) {
+                const assignments = window.currentUser.data?.teacherAssignments || {};
+                availableClasses = Object.keys(assignments).length > 0 
+                    ? Object.keys(assignments).sort() 
+                    : ((window.currentUser.classes && window.currentUser.classes.length > 0) ? window.currentUser.classes.sort() : allClasses);
+            }
+
+            let currentClass = academicItem ? academicItem.class : (availableClasses[0] || '1A');
+
+            if (prefilledNisn && !academicItem) {
+                const foundStu = window.appState.students.find(s => s.nisn === prefilledNisn);
+                if (foundStu && availableClasses.includes(foundStu.class)) currentClass = foundStu.class;
+            }
+
+            const currentNisn = academicItem ? academicItem.nisn : (prefilledNisn || '');
+            const currentSubject = academicItem ? academicItem.subject : '';
+            const currentType = academicItem ? academicItem.type : ACADEMIC_TYPES[0];
+            const currentScore = academicItem ? academicItem.score : '';
+            const currentNote = academicItem ? academicItem.note : '';
+
+            const classOptionsHtml = availableClasses.map(c => `<option value="${c}" ${c === currentClass ? 'selected' : ''}>Kelas ${c}</option>`).join('');
+            const typeOptionsHtml = ACADEMIC_TYPES.map(t => `<option value="${t}" ${t === currentType ? 'selected' : ''}>${t}</option>`).join('');
+
+            const assignments = isGuru ? (window.currentUser.data?.teacherAssignments || {}) : {};
+            let teacherSubjectsForClass = [];
+            if (isGuru) {
+                if (Object.keys(assignments).length > 0) {
+                    teacherSubjectsForClass = assignments[currentClass] || [];
+                } else {
+                    teacherSubjectsForClass = window.currentUser.subjects || [];
+                }
+            }
+
+            let subjectInputHtml = '';
+            if (isGuru && teacherSubjectsForClass.length > 0) {
+                let options = [...teacherSubjectsForClass];
+                if (currentSubject && !options.includes(currentSubject)) options.unshift(currentSubject);
+                const subjectOpts = options.map(s => `<option value="${s}" ${s === currentSubject ? 'selected' : ''}>${s}</option>`).join('');
+                subjectInputHtml = `<select id="acad-subject" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required>${subjectOpts}</select>`;
+            } else if (isGuru) {
+                subjectInputHtml = `<select id="acad-subject" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required><option value="">Tidak ada mapel untuk kelas ini</option></select>`;
+            } else {
+                subjectInputHtml = `<input type="text" id="acad-subject" value="${currentSubject}" placeholder="Contoh: Matematika, IPA..." class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required>`;
+            }
+
+            window.openModal(`
+                <div class="p-6 sm:p-8">
+                    <h3 class="text-xl font-extrabold text-slate-800 mb-2 flex items-center gap-2">
+                        <i class="fas ${isEdit ? 'fa-edit text-amber-500' : 'fa-plus-circle text-indigo-600'}"></i>
+                        ${isEdit ? 'Edit Data Nilai Akademik' : 'Tambah Nilai Akademik'}
+                    </h3>
+                    <p class="text-xs text-slate-500 mb-6 font-medium">${isEdit ? 'Ubah rincian nilai siswa di bawah ini.' : 'Masukkan nilai akademik siswa ke dalam sistem.'}</p>
+
+                    <form onsubmit="window.saveAcademic(event, '${id || ''}')" class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Pilih Kelas</label>
+                                <select id="acad-class-select" onchange="window.updateAcademicStudentDropdown(); window.updateAcademicSubjectDropdownForClass(this.value);" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600" ${isEdit ? 'disabled' : ''}>
+                                    ${classOptionsHtml}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Pilih Siswa</label>
+                                <select id="acad-student" onchange="window.renderAcademicModalHistory(this.value)" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600" required ${isEdit ? 'disabled' : ''}>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Mata Pelajaran</label>
+                                <div id="acad-subject-container">
+                                    ${subjectInputHtml}
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Jenis Penilaian</label>
+                                <select id="acad-type" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required>
+                                    ${typeOptionsHtml}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Nilai (0 - 100)</label>
+                                <input type="number" id="acad-score" min="0" max="100" value="${currentScore}" placeholder="85" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white" required>
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Catatan / Keterangan</label>
+                                <input type="text" id="acad-note" value="${currentNote}" placeholder="Contoh: Sangat Baik, Perlu Remedial..." class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600 focus:bg-white">
+                            </div>
+                        </div>
+
+                        <div id="acad-modal-history" class="mt-4 pt-4 border-t border-slate-100"></div>
+
+                        <div class="pt-4 flex justify-end gap-3 border-t border-slate-100">
+                            <button type="button" onclick="window.closeModal()" class="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs sm:text-sm">Batal</button>
+                            <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md flex items-center gap-2">
+                                <i class="fas fa-save"></i> ${isEdit ? 'Simpan Perubahan' : 'Simpan Data'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `, 'max-w-2xl');
+
+            setTimeout(() => { window.updateAcademicStudentDropdown(currentNisn); }, 50);
+        };
+
 	window.saveAcademic = async (e, id = null) => {
     e.preventDefault();
 
