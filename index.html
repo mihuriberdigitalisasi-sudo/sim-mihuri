@@ -1342,192 +1342,197 @@
             window.openBatchAcademicModal();
         };
 
-    window.processBatchAcademic = async function(e) {
-    e.preventDefault();
-    // --- BLOK BARU DENGAN VALIDASI AKSES GURU, KELAS, & MAPEL ---
-const subject = document.getElementById('batch-acad-subject').value.trim();
-const type = document.getElementById('batch-acad-type').value;
-const targetClass = document.getElementById('batch-acad-class').value;
-
-// Validasi ketat hak akses guru pengampu
-if (window.currentUser && window.currentUser.role === 'guru') {
-    const isAllowed = window.isTeacherAuthorizedForClassAndSubject(targetClass, subject);
-    if (!isAllowed) {
-        window.showToast(`Akses ditolak! Anda tidak memiliki hak mengajar mata pelajaran "${subject}" di Kelas ${targetClass}.`, "error");
-        const btn = document.getElementById('btn-submit-batch-acad');
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = `<i class="fas fa-save"></i> Simpan Semua Nilai`;
-        }
-        return;
-    }
-}
-
-    if (!subject) {
-        window.showToast("Mata pelajaran harus diisi!", "error");
-        return;
-    }
-
-    const inputs = document.querySelectorAll('input[name^="score_"]');
-    const btn = document.getElementById('btn-submit-batch-acad');
-    btn.disabled = true;
-    btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> Menyimpan & Mengirim WA...`;
-
-    if (!window.db) {
-        window.showToast("Koneksi database offline!", "error");
-        btn.disabled = false;
-        btn.innerHTML = `<i class="fas fa-save"></i> Simpan Semua Nilai`;
-        return;
-    }
-
-    if (!window.fs || typeof window.fs.writeBatch !== 'function') {
-        window.showToast("Fungsi Batch Firestore belum siap. Silakan refresh halaman!", "error");
-        btn.disabled = false;
-        btn.innerHTML = `<i class="fas fa-save"></i> Simpan Semua Nilai`;
-        return;
-    }
-
-    try {
-        const batch = window.fs.writeBatch(window.db);
-        let prepareCount = 0;
-        const newRecords = [];
-        const waQueue = []; // Antrean pengiriman WA
-
-        inputs.forEach(input => {
-            const scoreVal = input.value.trim();
-            if (scoreVal !== '') {
-                const nisn = input.getAttribute('data-nisn');
-                const studentName = input.getAttribute('data-name');
-                const score = parseFloat(scoreVal);
-
-                const acadObj = {
-                    nisn: nisn,
-                    studentName: studentName,
-                    class: targetClass,
-                    subject: subject,
-                    type: type,
-                    score: score,
-                    materi: materi || '-',
-                    note: materi || '-',
-                    semester: window.appState.settings.semester,
-                    year: window.appState.settings.year,
-                    updatedAt: new Date().toISOString()
-                };
-
-                const cleanSubject = subject.replace(/[^a-zA-Z0-9]/g, '_');
-                const cleanType = type.replace(/[^a-zA-Z0-9]/g, '_');
-                const customId = `${nisn}_${cleanSubject}_${cleanType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-                acadObj.id = customId;
-
-                const docRef = window.fs.doc(window.db, 'academics', customId);
-                batch.set(docRef, acadObj);
-
-                newRecords.push(acadObj);
-                prepareCount++;
-
-                // Cari data siswa untuk mendapatkan nomor HP Orang Tua
-                const studentObj = (window.appState.students || []).find(s => s.nisn === nisn);
-                const parentPhone = studentObj ? (studentObj.phone || studentObj.hpOrtu || studentObj.noHp) : null;
-
-                if (parentPhone && parentPhone !== '-') {
-                    const waMsg = `*NOTIFIKASI NILAI AKADEMIK*\n` +
-                                  `=============================\n` +
-                                  `Nama   : *${studentName}*\n` +
-                                  `NISN   : ${nisn}\n` +
-                                  `Kelas  : ${targetClass}\n` +
-                                  `Mapel  : ${subject}\n` +
-                                  `Jenis  : ${type}\n` +
-                                  `Materi : ${materi || '-'}\n` +
-                                  `Nilai  : *${score}*\n` +
-                                  `=============================\n` +
-                                  `_Pesan otomatis dari ${window.appState.settings.schoolName || 'SIM-MIhuri'}._`;
-                    waQueue.push({ phone: parentPhone, message: waMsg });
-                }
-            }
-        });
-
-        if (prepareCount === 0) {
-            window.showToast("Tidak ada nilai yang diinputkan.", "info");
-            btn.disabled = false;
-            btn.innerHTML = `<i class="fas fa-save"></i> Simpan Semua Nilai`;
-            return;
-        }
-
-        // Simpan semua nilai secara kolektif ke Firestore Cloud
-        await batch.commit();
-
-        if (!Array.isArray(window.appState.academics)) {
-            window.appState.academics = [];
-        }
-        newRecords.forEach(record => {
-            const idx = window.appState.academics.findIndex(i => i.id === record.id);
-            if (idx > -1) window.appState.academics[idx] = record;
-            else window.appState.academics.push(record);
-        });
-
-        // Kirim Notifikasi WhatsApp secara berurutan
-        if (waQueue.length > 0) {
-            for (const item of waQueue) {
-                await window.sendWaNotification(item.phone, item.message);
-            }
-        }
-
+    // =========================================================
+        // FUNGSI GABUNGAN: BATCH ACADEMIC (DENGAN VALIDASI & NOTIF WA)
         // =========================================================
-        // KODE BARU: CEK KELENGKAPAN NILAI & KIRIM WA KE WALI KELAS
-        // =========================================================
-        const totalStudentsInClass = (window.appState.students || []).filter(s => s.class === targetClass).length;
-        
-        // Jika seluruh siswa di kelas tersebut sudah memiliki nilai yang terinput
-        if (totalStudentsInClass > 0 && prepareCount >= totalStudentsInClass) {
-            // Cari data Wali Kelas dari Master Wali Kelas (homerooms)
-            const homeroom = (window.appState.homerooms || []).find(h => h.class === targetClass);
-            let homeroomTeacherPhone = null;
+        window.processBatchAcademic = async function(e) {
+            e.preventDefault();
+            
+            // Ambil nilai dari form input
+            const subject = document.getElementById('batch-acad-subject').value.trim();
+            const type = document.getElementById('batch-acad-type').value;
+            const targetClass = document.getElementById('batch-acad-class').value;
+            
+            // PERBAIKAN: Mendeklarasikan variabel materi secara aman dari elemen input
+            const materiEl = document.getElementById('batch-acad-materi');
+            const materi = materiEl ? materiEl.value.trim() : '-';
 
-            if (homeroom) {
-                // Cari data guru berdasarkan NIP atau nama untuk mengambil nomor HP
-                const teacherObj = (window.appState.teachers || []).find(t => 
-                    (homeroom.nip && t.nip === homeroom.nip) || 
-                    (t.name && t.name.toLowerCase() === (homeroom.teacherName || '').toLowerCase())
-                );
-                if (teacherObj) {
-                    homeroomTeacherPhone = teacherObj.phone || teacherObj.noHp || teacherObj.hp;
+            // Validasi ketat hak akses guru pengampu
+            if (window.currentUser && window.currentUser.role === 'guru') {
+                const isAllowed = window.isTeacherAuthorizedForClassAndSubject(targetClass, subject);
+                if (!isAllowed) {
+                    window.showToast(`Akses ditolak! Anda tidak memiliki hak mengajar mata pelajaran "${subject}" di Kelas ${targetClass}.`, "error");
+                    const btn = document.getElementById('btn-submit-batch-acad');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = `<i class="fas fa-save"></i> Simpan Semua Nilai`;
+                    }
+                    return;
                 }
             }
 
-            if (homeroomTeacherPhone && homeroomTeacherPhone !== '-') {
-                const teacherInputName = (window.currentUser && window.currentUser.name) ? window.currentUser.name : 'Guru Pengampu';
-                const waMessageWaliKelas = `*PEMBERITAHUAN INPUT NILAI SELESAI*\n` +
-                                          `=============================\n` +
-                                          `Yth. Wali Kelas *${targetClass}*\n\n` +
-                                          `Penginputan nilai pelajaran telah *LENGKAP* untuk seluruh siswa:\n` +
-                                          `Kelas          : *${targetClass}*\n` +
-                                          `Mata Pelajaran : *${subject}*\n` +
-                                          `Jenis Penilaian: *${type}*\n` +
-                                          `Materi/Bahasan : ${materi || '-'}\n` +
-                                          `Total Siswa    : ${prepareCount} Siswa\n` +
-                                          `Penginput      : ${teacherInputName}\n` +
-                                          `=============================\n` +
-                                          `_Pesan otomatis SIM-MIhuri._`;
-
-                await window.sendWaNotification(homeroomTeacherPhone, waMessageWaliKelas);
+            if (!subject) {
+                window.showToast("Mata pelajaran harus diisi!", "error");
+                return;
             }
-        }
-        // =========================================================
 
-        window.closeModal();
-        window.showToast(`Berhasil menyimpan ${prepareCount} nilai & mengirimkan notifikasi WA!`, "success");
+            const inputs = document.querySelectorAll('input[name^="score_"]');
+            const btn = document.getElementById('btn-submit-batch-acad');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> Menyimpan & Mengirim WA...`;
 
-        if (typeof window.renderAcademics === 'function') {
-            window.renderAcademics();
-        }
-    } catch (err) {
-        console.error("Batch Academic Error:", err);
-        window.showToast("Gagal menyimpan data kolektif: " + (err.message || "Terjadi kesalahan jaringan"), "error");
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = `<i class="fas fa-save"></i> Simpan Semua Nilai`;
-    }
-    };
+            if (!window.db) {
+                window.showToast("Koneksi database offline!", "error");
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fas fa-save"></i> Simpan Semua Nilai`;
+                return;
+            }
+
+            if (!window.fs || typeof window.fs.writeBatch !== 'function') {
+                window.showToast("Fungsi Batch Firestore belum siap. Silakan refresh halaman!", "error");
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fas fa-save"></i> Simpan Semua Nilai`;
+                return;
+            }
+
+            try {
+                const batch = window.fs.writeBatch(window.db);
+                let prepareCount = 0;
+                const newRecords = [];
+                const waQueue = []; // Antrean pengiriman WA
+
+                inputs.forEach(input => {
+                    const scoreVal = input.value.trim();
+                    if (scoreVal !== '') {
+                        const nisn = input.getAttribute('data-nisn');
+                        const studentName = input.getAttribute('data-name');
+                        const score = parseFloat(scoreVal);
+
+                        const acadObj = {
+                            nisn: nisn,
+                            studentName: studentName,
+                            class: targetClass,
+                            subject: subject,
+                            type: type,
+                            score: score,
+                            materi: materi,
+                            note: materi,
+                            semester: window.appState.settings.semester,
+                            year: window.appState.settings.year,
+                            updatedAt: new Date().toISOString()
+                        };
+
+                        const cleanSubject = subject.replace(/[^a-zA-Z0-9]/g, '_');
+                        const cleanType = type.replace(/[^a-zA-Z0-9]/g, '_');
+                        const customId = `${nisn}_${cleanSubject}_${cleanType}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+                        acadObj.id = customId;
+
+                        const docRef = window.fs.doc(window.db, 'academics', customId);
+                        batch.set(docRef, acadObj);
+
+                        newRecords.push(acadObj);
+                        prepareCount++;
+
+                        // Cari data siswa untuk mendapatkan nomor HP Orang Tua
+                        const studentObj = (window.appState.students || []).find(s => s.nisn === nisn);
+                        const parentPhone = studentObj ? (studentObj.phone || studentObj.hpOrtu || studentObj.noHp) : null;
+
+                        if (parentPhone && parentPhone !== '-') {
+                            const waMsg = `*NOTIFIKASI NILAI AKADEMIK*\n` +
+                                          `=============================\n` +
+                                          `Nama   : *${studentName}*\n` +
+                                          `NISN   : ${nisn}\n` +
+                                          `Kelas  : ${targetClass}\n` +
+                                          `Mapel  : ${subject}\n` +
+                                          `Jenis  : ${type}\n` +
+                                          `Materi : ${materi}\n` +
+                                          `Nilai  : *${score}*\n` +
+                                          `=============================\n` +
+                                          `_Pesan otomatis dari ${window.appState.settings.schoolName || 'SIM-MIhuri'}._`;
+                            waQueue.push({ phone: parentPhone, message: waMsg });
+                        }
+                    }
+                });
+
+                if (prepareCount === 0) {
+                    window.showToast("Tidak ada nilai yang diinputkan.", "info");
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="fas fa-save"></i> Simpan Semua Nilai`;
+                    return;
+                }
+
+                // Simpan semua nilai secara kolektif ke Firestore Cloud
+                await batch.commit();
+
+                if (!Array.isArray(window.appState.academics)) {
+                    window.appState.academics = [];
+                }
+                newRecords.forEach(record => {
+                    const idx = window.appState.academics.findIndex(i => i.id === record.id);
+                    if (idx > -1) window.appState.academics[idx] = record;
+                    else window.appState.academics.push(record);
+                });
+
+                // Kirim Notifikasi WhatsApp secara berurutan ke Orang Tua
+                if (waQueue.length > 0) {
+                    for (const item of waQueue) {
+                        await window.sendWaNotification(item.phone, item.message);
+                    }
+                }
+
+                // =========================================================
+                // CEK KELENGKAPAN NILAI & KIRIM WA KE WALI KELAS
+                // =========================================================
+                const totalStudentsInClass = (window.appState.students || []).filter(s => s.class === targetClass).length;
+                
+                if (totalStudentsInClass > 0 && prepareCount >= totalStudentsInClass) {
+                    const homeroom = (window.appState.homerooms || []).find(h => h.class === targetClass);
+                    let homeroomTeacherPhone = null;
+
+                    if (homeroom) {
+                        const teacherObj = (window.appState.teachers || []).find(t => 
+                            (homeroom.nip && t.nip === homeroom.nip) || 
+                            (t.name && t.name.toLowerCase() === (homeroom.teacherName || '').toLowerCase())
+                        );
+                        if (teacherObj) {
+                            homeroomTeacherPhone = teacherObj.phone || teacherObj.noHp || teacherObj.hp;
+                        }
+                    }
+
+                    if (homeroomTeacherPhone && homeroomTeacherPhone !== '-') {
+                        const teacherInputName = (window.currentUser && window.currentUser.name) ? window.currentUser.name : 'Guru Pengampu';
+                        const waMessageWaliKelas = `*PEMBERITAHUAN INPUT NILAI SELESAI*\n` +
+                                                  `=============================\n` +
+                                                  `Yth. Wali Kelas *${targetClass}*\n\n` +
+                                                  `Penginputan nilai pelajaran telah *LENGKAP* untuk seluruh siswa:\n` +
+                                                  `Kelas          : *${targetClass}*\n` +
+                                                  `Mata Pelajaran : *${subject}*\n` +
+                                                  `Jenis Penilaian: *${type}*\n` +
+                                                  `Materi/Bahasan : ${materi}\n` +
+                                                  `Total Siswa    : ${prepareCount} Siswa\n` +
+                                                  `Penginput      : ${teacherInputName}\n` +
+                                                  `=============================\n` +
+                                                  `_Pesan otomatis SIM-MIhuri._`;
+
+                        await window.sendWaNotification(homeroomTeacherPhone, waMessageWaliKelas);
+                    }
+                }
+                // =========================================================
+
+                window.closeModal();
+                window.showToast(`Berhasil menyimpan ${prepareCount} nilai & mengirimkan notifikasi WA!`, "success");
+
+                if (typeof window.renderAcademics === 'function') {
+                    window.renderAcademics();
+                }
+            } catch (err) {
+                console.error("Batch Academic Error:", err);
+                window.showToast("Gagal menyimpan data kolektif: " + (err.message || "Terjadi kesalahan jaringan"), "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fas fa-save"></i> Simpan Semua Nilai`;
+            }
+        };
 
     // =========================================================
 // PERBAIKAN TELAK: AUTO-SYNC MAPEL & NORMALISASI NILAI PJOK
