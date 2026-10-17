@@ -779,6 +779,43 @@
             } catch(e){}
         };
 
+        // =========================================================
+        // KODE BARU: STATE & FUNGSI PENCATATAN RIWAYAT LOGIN
+        // =========================================================
+        if (!window.appState.loginHistories) {
+            window.appState.loginHistories = [];
+        }
+
+        window.recordLoginHistory = async function() {
+            if (!window.currentUser) return;
+            
+            const now = new Date();
+            const jakartaTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+            const dateStr = getLocalDateString(now);
+            const timeStr = String(jakartaTime.getHours()).padStart(2, '0') + ':' + String(jakartaTime.getMinutes()).padStart(2, '0');
+
+            const historyObj = {
+                userName: window.currentUser.name,
+                role: window.currentUser.role,
+                id: window.currentUser.id,
+                date: dateStr,
+                time: timeStr,
+                timestamp: now.getTime()
+            };
+
+            // Simpan ke Cloud Firestore (koleksi 'loginHistories')
+            if (window.db && window.fs) {
+                try {
+                    await window.fs.addDoc(window.fs.collection(window.db, 'loginHistories'), historyObj);
+                } catch (e) {
+                    console.error("Gagal simpan riwayat login ke cloud:", e);
+                }
+            }
+
+            // Masukkan ke state lokal agar langsung tampil
+            window.appState.loginHistories.unshift(historyObj);
+        };
+
         window.handleLogin = async (e) => {
             e.preventDefault();
             const pwd = document.getElementById('password-input').value.trim();
@@ -798,6 +835,24 @@
                     // 1. Cek Login Admin
                     if (pwd === CONSTANTS.ADMIN_PWD) {
                         window.currentUser = { role: ROLES.ADMIN, name: 'Administrator', id: 'admin' };
+                        // Contoh fungsi untuk mencatat log login ke Cloud
+const recordLoginLog = async (userObj) => {
+    if (!window.db) return;
+    try {
+        const logData = {
+            userId: userObj.id || userObj.nisn || 'admin',
+            name: userObj.name,
+            role: userObj.role,
+            class: userObj.data?.class || '-',
+            timestamp: new Date().toISOString(),
+            date: getLocalDateString(new Date())
+        };
+        // Simpan ke koleksi 'login_logs' di Firestore
+        await window.fs.addDoc(window.fs.collection(window.db, 'login_logs'), logData);
+    } catch (e) {
+        console.error("Gagal mencatat log login:", e);
+    }
+};
                         initAppUI();
                     } else {
                         // 2. Cek Login Guru Individu (Berdasarkan Password Unik Per Guru)
@@ -980,31 +1035,34 @@
         };
 
         const initAppUI = () => {
-    document.getElementById('login-screen').classList.add('hidden');
-    document.getElementById('app-layout').classList.remove('hidden');
-    
-    // Set data user pada elemen profil bawaan di HTML
-    const userNameEl = document.getElementById('user-name');
-    const userRoleEl = document.getElementById('user-role');
-    const userAvatarEl = document.getElementById('user-avatar');
+        if (window.currentUser) {
+            window.recordLoginHistory();
+        }
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app-layout').classList.remove('hidden');
+        
+        // Set data user pada elemen profil bawaan di HTML
+        const userNameEl = document.getElementById('user-name');
+        const userRoleEl = document.getElementById('user-role');
+        const userAvatarEl = document.getElementById('user-avatar');
 
-    if(userNameEl) userNameEl.textContent = window.currentUser.name;
-    if(userRoleEl) userRoleEl.textContent = window.currentUser.role;
-    if(userAvatarEl) userAvatarEl.textContent = window.currentUser.name.charAt(0).toUpperCase();
-    
-    const semInfo = document.getElementById('header-semester-info');
-    if(semInfo) semInfo.textContent = `TA ${window.appState.settings.year} - Semester ${window.appState.settings.semester}`;
-    
-    const nav = document.getElementById('nav-menu');
-    nav.innerHTML = '';
+        if(userNameEl) userNameEl.textContent = window.currentUser.name;
+        if(userRoleEl) userRoleEl.textContent = window.currentUser.role;
+        if(userAvatarEl) userAvatarEl.textContent = window.currentUser.name.charAt(0).toUpperCase();
+        
+        const semInfo = document.getElementById('header-semester-info');
+        if(semInfo) semInfo.textContent = `TA ${window.appState.settings.year} - Semester ${window.appState.settings.semester}`;
+        
+        const nav = document.getElementById('nav-menu');
+        nav.innerHTML = '';
 
-    // Kontainer menu flex biasa agar rapi
-    nav.className = "flex flex-col px-3 py-2 space-y-2 overflow-y-auto custom-scrollbar";
+        // Kontainer menu flex biasa agar rapi
+        nav.className = "flex flex-col px-3 py-2 space-y-2 overflow-y-auto custom-scrollbar";
 
-    // Cek Wali Kelas
-    const isWaliKelas = window.currentUser.role === ROLES.GURU && (window.appState.homerooms || []).some(h => 
-        h.teacherName === window.currentUser.name || (window.currentUser.data && h.nip === window.currentUser.data.nip)
-    );
+        // Cek Wali Kelas
+        const isWaliKelas = window.currentUser.role === ROLES.GURU && (window.appState.homerooms || []).some(h => 
+            h.teacherName === window.currentUser.name || (window.currentUser.data && h.nip === window.currentUser.data.nip)
+        );
 
     const menuGroups = [
         {
@@ -3690,6 +3748,45 @@ window.saveTeacherAccess = async function(e, teacherId) {
                 </div>
             `;
 
+            // =========================================================
+            // KODE BARU: HTML WIDGET RIWAYAT LOGIN UNTUK DASHBOARD
+            // =========================================================
+            const recentLogins = (window.appState.loginHistories || []).slice(0, 5);
+            let loginHistoryRows = recentLogins.map(h => `
+                <tr class="border-b border-slate-100 text-xs">
+                    <td class="py-2.5 font-bold text-slate-800">${h.userName}</td>
+                    <td class="py-2.5"><span class="px-2 py-0.5 rounded font-bold text-[10px] uppercase ${h.role==='admin'?'bg-purple-100 text-purple-700':h.role==='guru'?'bg-indigo-100 text-indigo-700':'bg-emerald-100 text-emerald-700'}">${h.role}</span></td>
+                    <td class="py-2.5 text-slate-500 text-right">${h.date} ${h.time}</td>
+                </tr>
+            `).join('');
+
+            if (!loginHistoryRows) {
+                loginHistoryRows = `<tr><td colspan="3" class="py-4 text-center text-slate-400 italic text-xs">Belum ada riwayat login tercatat.</td></tr>`;
+            }
+
+            const loginHistoryWidgetHtml = (window.currentUser && window.currentUser.role === 'admin') ? `
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/60 mt-6">
+                    <div class="flex items-center justify-between mb-3.5">
+                        <h3 class="text-xs sm:text-sm font-extrabold text-slate-800 uppercase tracking-wide flex items-center gap-2">
+                            <i class="fas fa-history text-indigo-500"></i> Pemantauan Riwayat Login Terakhir
+                        </h3>
+                        <span class="text-[10px] font-bold text-slate-400">Live Activity</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-400 uppercase text-[10px] font-extrabold border-b border-slate-100">
+                                    <th class="py-2">Pengguna</th>
+                                    <th class="py-2">Role</th>
+                                    <th class="py-2 text-right">Waktu Login</th>
+                                </tr>
+                            </thead>
+                            <tbody>${loginHistoryRows}</tbody>
+                        </table>
+                    </div>
+                </div>
+            ` : '';
+
             const isTabOps = window.dashState.activeChartTab === 'ops';
             
             const chartsContainerHtml = isTabOps ? `
@@ -3850,6 +3947,7 @@ window.saveTeacherAccess = async function(e, teacherId) {
                             <div class="space-y-2.5">
                                 ${todaySchedulesHtml}
                             </div>
+                                ${loginHistoryWidgetHtml}
                         </div>
                     </div>
                 </div>
