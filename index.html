@@ -296,6 +296,8 @@
         window.appState = {
             students: [],
             teachers: [],
+            attendance: [], students: [],
+            teachers: [],
             attendance: [], 
             payments: [], 
             academics: [], 
@@ -303,6 +305,7 @@
             schedules: [], 
             announcements: [],
             homerooms: [],
+            cbtExams: [], // <-- TAMBAHKAN BARIS INI
             settings: {
                 schoolName: "SIM-MIhuri", 
                 principal: "H. MIftahur Rofi', S.Pdi", 
@@ -765,7 +768,7 @@
 
         const loadAllDataFromCloud = async () => {
             if(!window.db) return;
-            const colls = ['students', 'teachers', 'attendance', 'payments', 'academics', 'catatans', 'schedules', 'announcements', 'homerooms', 'teacherAttendance'];
+            const colls = ['students', 'teachers', 'attendance', 'payments', 'academics', 'catatans', 'schedules', 'announcements', 'homerooms', 'teacherAttendance', 'cbtExams'];
             for (let c of colls) {
                 try {
                     const snap = await window.fs.getDocs(window.fs.collection(window.db, c));
@@ -1622,6 +1625,22 @@ window.ensureTeacherHasSubject = function(teacherId, subjectName) {
     }
 };
 		
+        window.saveCBTExam = async function(examData, customId = null) {
+            if (!window.db) {
+                window.showToast("Koneksi cloud offline!", "error");
+                return;
+            }
+            
+            // Simpan menggunakan helper saveDataToCloud ke koleksi 'cbtExams'
+            const res = await window.saveDataToCloud('cbtExams', examData, customId);
+            if (res) {
+                window.showToast("Data ujian CBT berhasil disimpan ke cloud!", "success");
+                if (typeof window.renderCBT === 'function') {
+                    window.renderCBT();
+                }
+            }
+        };
+        
         window.navigate = (pageId) => {
             if (window.innerWidth < 1024 && !document.getElementById('sidebar-overlay').classList.contains('hidden')) {
                 window.toggleSidebar();
@@ -7946,7 +7965,11 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
                 }
             });
 
+            // Membuat ID unik berbasis waktu agar Firestore bisa menyimpannya dengan kunci dokumen yang pasti
+            const uniqueId = 'cbt_' + Date.now();
+
             const examObj = {
+                id: uniqueId,
                 title: document.getElementById('cbt-title').value,
                 subject: document.getElementById('cbt-subject').value,
                 class: document.getElementById('cbt-class').value,
@@ -7956,9 +7979,26 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
             };
 
             window.closeModal();
-            const res = await window.saveDataToCloud('cbtExams', examObj);
-            if (res) {
-                window.showToast("Ujian CBT multi-jenis soal berhasil dibuat!", "success");
+
+            // 1. Simpan ke state lokal browser terlebih dahulu agar langsung muncul tanpa refresh
+            window.appState.cbtExams = window.appState.cbtExams || [];
+            window.appState.cbtExams.push(examObj);
+
+            // 2. Simpan secara permanen ke Cloud Firestore
+            try {
+                // Memastikan fungsi saveDataToCloud berjalan dengan benar
+                const res = await window.saveDataToCloud('cbtExams', examObj);
+                
+                // Fallback langsung ke Firestore SDK jika window.saveDataToCloud mengembalikan nilai kosong/gagal
+                if (!res && window.db && window.fs) {
+                    await window.fs.setDoc(window.fs.doc(window.db, 'cbtExams', uniqueId), examObj);
+                }
+
+                window.showToast("Ujian CBT multi-jenis soal berhasil dibuat dan tersimpan di Cloud!", "success");
+                window.renderCBT();
+            } catch (error) {
+                console.error("Gagal menyimpan ke Cloud Firestore:", error);
+                window.showToast("Gagal menyimpan ke server cloud! Periksa koneksi atau izin database Anda.", "error");
                 window.renderCBT();
             }
         };
