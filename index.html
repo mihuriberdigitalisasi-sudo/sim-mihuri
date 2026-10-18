@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -296,8 +297,6 @@
         window.appState = {
             students: [],
             teachers: [],
-            attendance: [], students: [],
-            teachers: [],
             attendance: [], 
             payments: [], 
             academics: [], 
@@ -305,7 +304,8 @@
             schedules: [], 
             announcements: [],
             homerooms: [],
-            cbtExams: [], // <-- TAMBAHKAN BARIS INI
+            cbtExams: [],
+            loginHistories: [],
             settings: {
                 schoolName: "SIM-MIhuri", 
                 principal: "H. MIftahur Rofi', S.Pdi", 
@@ -747,40 +747,77 @@
         };
         
         window.executeDelete = async (coll, id, navId) => {
-            window.closeModal();
+    window.closeModal();
 
-            // Proteksi Tambahan: Cegah Non-Admin Menghapus Catatan
-            if (coll === 'catatans' && window.currentUser?.role !== ROLES.ADMIN) {
-                window.showToast("Hanya Admin yang dapat menghapus data catatan!", "error");
-                return;
-            }
+    // Proteksi Tambahan: Cegah Non-Admin Menghapus Catatan (jika diperlukan)
+    if (coll === 'catatans' && window.currentUser?.role !== 'admin') {
+        window.showToast("Hanya Admin yang dapat menghapus data catatan!", "error");
+        return;
+    }
 
-            if (!window.db) return;
-            try {
-                await window.fs.deleteDoc(window.fs.doc(window.db, coll, id));
-                window.appState[coll] = window.appState[coll].filter(item => item.id !== id);
-                window.showToast("Data terhapus dari Cloud!", "success");
-                if (navId) window.navigate(navId);
-            } catch(e) { 
-                window.showToast("Gagal menghapus data", "error"); 
-            }
-        };
+    if (!window.db) {
+        window.showToast("Koneksi database offline!", "error");
+        return;
+    }
+    
+    try {
+        // Pastikan ID valid sebelum memanggil deleteDoc Firestore
+        if (!id || id === 'undefined' || id === 'null') {
+            window.showToast("ID data tidak valid untuk dihapus.", "error");
+            return;
+        }
+
+        // Hapus permanen dari Cloud Firestore
+        await window.fs.deleteDoc(window.fs.doc(window.db, coll, String(id)));
+        
+        // Hapus dari state lokal appState yang bersesuaian secara akurat
+        if (window.appState && Array.isArray(window.appState[coll])) {
+            window.appState[coll] = window.appState[coll].filter(item => String(item.id) !== String(id));
+        }
+
+        window.showToast("Data berhasil dihapus permanen dari Cloud!", "success");
+        
+        // Render ulang halaman yang sesuai berdasarkan navId
+        if (navId === 'cbt' && typeof window.renderCBT === 'function') {
+            window.renderCBT();
+        } else if (navId === 'attendance' && typeof window.renderAttendance === 'function') {
+            window.renderAttendance();
+        } else if (navId === 'academics' && typeof window.renderAcademics === 'function') {
+            window.renderAcademics();
+        } else if (navId === 'catatan' && typeof window.renderCatatan === 'function') {
+            window.renderCatatan();
+        } else if (navId === 'payments' && typeof window.renderPayments === 'function') {
+            window.renderPayments();
+        } else if (navId === 'teachers' && typeof window.renderTeachers === 'function') {
+            window.renderTeachers();
+        } else if (navId === 'students' && typeof window.renderStudents === 'function') {
+            window.renderStudents();
+        }
+    } catch (e) {
+        console.error("Gagal menghapus dokumen dari Cloud:", e);
+        window.showToast("Gagal menghapus data dari Cloud: " + (e.message || "Kesalahan jaringan"), "error");
+    }
+};
 
         const loadAllDataFromCloud = async () => {
-            if(!window.db) return;
-            const colls = ['students', 'teachers', 'attendance', 'payments', 'academics', 'catatans', 'schedules', 'announcements', 'homerooms', 'teacherAttendance', 'cbtExams'];
-            for (let c of colls) {
-                try {
-                    const snap = await window.fs.getDocs(window.fs.collection(window.db, c));
-                    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    if(docs.length > 0) window.appState[c] = docs;
-                } catch(e) { console.error(`Gagal load ${c}`); }
-            }
-            try {
-                const snapSet = await window.fs.getDoc(window.fs.doc(window.db, "settings", "main"));
-                if (snapSet.exists()) window.appState.settings = { ...window.appState.settings, ...snapSet.data() };
-            } catch(e){}
-        };
+    if(!window.db) return;
+    const colls = ['students', 'teachers', 'attendance', 'payments', 'academics', 'catatans', 'schedules', 'announcements', 'homerooms', 'teacherAttendance', 'cbtExams'];
+    for (let c of colls) {
+        try {
+            const snap = await window.fs.getDocs(window.fs.collection(window.db, c));
+            const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            
+            // PERBAIKAN: Selalu update state meskipun docs.length === 0
+            window.appState[c] = docs; 
+        } catch(e) { 
+            console.error(`Gagal load ${c}`, e); 
+        }
+    }
+    try {
+        const snapSet = await window.fs.getDoc(window.fs.doc(window.db, "settings", "main"));
+        if (snapSet.exists()) window.appState.settings = { ...window.appState.settings, ...snapSet.data() };
+    } catch(e){}
+};
 
         // =========================================================
         // KODE BARU: STATE & FUNGSI PENCATATAN RIWAYAT LOGIN
@@ -7568,42 +7605,43 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
 
         // 6. Fungsi Utama renderCBT (Tampilan Utama Sesuai Sistem Anda)
         window.renderCBT = () => {
-            const content = document.getElementById('main-content');
-            if (!content) return;
+    const content = document.getElementById('main-content');
+    if (!content) return;
 
-            const isSiswa = window.currentUser.role === ROLES.SISWA;
-            const isAdmin = window.currentUser.role === ROLES.ADMIN;
-            const isGuru = window.currentUser.role === ROLES.GURU;
+    const isSiswa = window.currentUser.role === ROLES.SISWA;
+    const isAdmin = window.currentUser.role === ROLES.ADMIN;
+    const isGuru = window.currentUser.role === ROLES.GURU;
 
-            if (!window.appState.cbtExams) window.appState.cbtExams = [];
-            if (!window.appState.cbtResults) window.appState.cbtResults = [];
-            if (!window.appState.activeCbtSessions) window.appState.activeCbtSessions = [];
+    if (!window.appState.cbtExams) window.appState.cbtExams = [];
+    if (!window.appState.cbtResults) window.appState.cbtResults = [];
+    if (!window.appState.activeCbtSessions) window.appState.activeCbtSessions = [];
 
-            const exams = window.appState.cbtExams;
-            const results = window.appState.cbtResults;
+    const exams = window.appState.cbtExams;
+    const results = window.appState.cbtResults;
 
-            let examsHtml = exams.map((ex, idx) => {
-                const myResult = results.find(r => r.examId === ex.id && r.nisn === window.currentUser.id);
-                const isFinished = !!myResult;
+    let examsHtml = exams.map((ex, idx) => {
+        const myResult = results.find(r => r.examId === ex.id && r.nisn === window.currentUser.id);
+        const isFinished = !!myResult;
 
-                let actionBtn = '';
-                if (isSiswa) {
-                    if (isFinished) {
-                        actionBtn = `<span class="px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-xl font-bold text-xs">Selesai (Nilai: ${myResult.score})</span>`;
-                    } else {
-                        actionBtn = `<button onclick="window.startCbtExam('${ex.id}')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md transition-all"><i class="fas fa-play mr-1"></i> Mulai Ujian</button>`;
-                    }
-                } else {
-                    actionBtn = `
-                        <div class="flex items-center gap-2">
-                            <button onclick="window.openCbtResultModal('${ex.id}')" class="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl font-bold text-xs"><i class="fas fa-chart-bar mr-1"></i> Hasil</button>
-                            ${isAdmin || isGuru ? `
-                                <button onclick="window.openEditCbtExamModal('${ex.id}')" class="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-xl text-xs" title="Edit Ujian"><i class="fas fa-edit"></i></button>
-                                <button onclick="window.confirmDelete('cbtExams', '${ex.id}', 'cbt')" class="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-xs" title="Hapus Ujian"><i class="fas fa-trash-alt"></i></button>
-                            ` : ''}
-                        </div>
-                    `;
-                }
+        let actionBtn = '';
+        if (isSiswa) {
+            if (isFinished) {
+                actionBtn = `<span class="px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-xl font-bold text-xs">Selesai (Nilai: ${myResult.score})</span>`;
+            } else {
+                actionBtn = `<button onclick="window.startCbtExam('${ex.id}')" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md transition-all"><i class="fas fa-play mr-1"></i> Mulai Ujian</button>`;
+            }
+        } else {
+            actionBtn = `
+                <div class="flex items-center gap-2">
+                    <button onclick="window.openCbtResultModal('${ex.id}')" class="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-xl font-bold text-xs"><i class="fas fa-chart-bar mr-1"></i> Hasil</button>
+                    ${isAdmin || isGuru ? `
+                        <button onclick="window.openEditCbtExamModal('${ex.id}')" class="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-xl text-xs" title="Edit Ujian"><i class="fas fa-edit"></i></button>
+                        <!-- DIUBAH KE SINI: Memanggil fungsi hapus permanen Cloud -->
+                        <button onclick="window.deleteCBTExam('${ex.id}')" class="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-xs" title="Hapus Ujian"><i class="fas fa-trash-alt"></i></button>
+                    ` : ''}
+                </div>
+            `;
+        }
 
                 return `
                     <tr class="hover:bg-slate-50 border-b border-slate-100 text-xs sm:text-sm">
@@ -8184,6 +8222,90 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
                 window.renderCBT();
             }
         };
+        
+// Fungsi untuk memicu konfirmasi dan menghapus data ujian CBT
+window.deleteCBTExam = async (examId) => {
+    window.closeModal();
+
+    if (!window.db) {
+        window.showToast("Koneksi database offline!", "error");
+        return;
+    }
+
+    try {
+        if (!examId || examId === 'undefined' || examId === 'null') {
+            window.showToast("ID Ujian CBT tidak valid.", "error");
+            return;
+        }
+
+        // Hapus dokumen ujian CBT berdasarkan ID-nya dari koleksi 'cbtExams' (atau nama koleksi CBT Anda)
+        await window.fs.deleteDoc(window.fs.doc(window.db, 'cbtExams', String(examId)));
+
+        // Hapus juga dari array state lokal agar UI langsung ter-update tanpa perlu reload
+        if (window.appState && Array.isArray(window.appState.cbtExams)) {
+            window.appState.cbtExams = window.appState.cbtExams.filter(exam => String(exam.id) !== String(examId));
+        }
+
+        window.showToast("Data ujian CBT berhasil dihapus permanen!", "success");
+
+        // Render ulang tampilan CBT
+        if (typeof window.renderCBT === 'function') {
+            window.renderCBT();
+        }
+    } catch (e) {
+        console.error("Gagal menghapus ujian CBT:", e);
+        window.showToast("Gagal menghapus ujian dari Cloud: " + (e.message || "Kesalahan jaringan"), "error");
+    }
+};
+
+// Tambahkan fungsi ini di bagian modul CBT Anda
+window.deleteCBTExamPermanently = async (examId) => {
+    if (!window.db) {
+        window.showToast("Koneksi database offline!", "error");
+        return;
+    }
+    
+    try {
+        if (!examId || examId === 'undefined' || examId === 'null') {
+            window.showToast("ID Ujian CBT tidak valid.", "error");
+            return;
+        }
+
+        // 1. Hapus dokumen langsung dari koleksi 'cbtExams' di Cloud Firestore
+        await window.fs.deleteDoc(window.fs.doc(window.db, 'cbtExams', String(examId)));
+        
+        // 2. Hapus secara mutlak dari array state lokal
+        if (window.appState && Array.isArray(window.appState.cbtExams)) {
+            window.appState.cbtExams = window.appState.cbtExams.filter(item => String(item.id) !== String(examId));
+        }
+
+        window.showToast("Ujian CBT berhasil dihapus permanen dari Cloud!", "success");
+
+        // 3. Render ulang tampilan CBT jika fungsi render tersedia
+        if (typeof window.renderCBT === 'function') {
+            window.renderCBT();
+        }
+    } catch (e) {
+        console.error("Gagal menghapus ujian CBT:", e);
+        window.showToast("Gagal menghapus ujian dari Cloud: " + (e.message || "Kesalahan jaringan"), "error");
+    }
+};
+
+window.confirmDeleteCbt = function(examId) {
+    window.openModal(`
+        <div class="text-center p-6 sm:p-8 fade-in">
+            <div class="mx-auto flex items-center justify-center h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-red-100 mb-6 border-4 border-red-50">
+                <i class="fas fa-trash-alt text-2xl sm:text-3xl text-red-500"></i>
+            </div>
+            <h2 class="text-xl sm:text-2xl font-extrabold mb-2 text-slate-800">Hapus Ujian CBT?</h2>
+            <p class="text-slate-500 text-xs sm:text-sm mb-8 max-w-sm mx-auto font-medium">Data ujian ini akan dihapus secara permanen dari Cloud Database.</p>
+            <div class="flex gap-4 justify-center">
+                <button onclick="window.closeModal()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 font-bold text-xs sm:text-sm transition">Batal</button>
+                <button onclick="window.deleteCBTExamPermanently('${exam.id}')" class="btn-delete">Hapus Ujian</button>
+            </div>
+        </div>
+    `, 'max-w-md');
+};
 
         window.startCbtExam = (examId) => {
             const exam = window.appState.cbtExams.find(e => e.id === examId);
@@ -8463,6 +8585,8 @@ window.updatePaymentStudentDropdown = (selectedNisn = null) => {
                 </div>
             `, 'max-w-3xl');
         };
+
+        
 		
         /* ==========================================================================
            MODUL ABSENSI MENGAJAR GURU (MURNI CLOUD STORAGE) + FILTER & DOWNLOAD WORD
