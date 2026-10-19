@@ -5947,6 +5947,195 @@ window.renderAcademicModalHistory = (nisn) => {
     }
 };
 
+    // =========================================================
+        // TEMPATKAN KODE PENANGANAN KASUS BARU DI SINI (TEPAT DI ATAS renderCatatan)
+        // =========================================================
+
+        // 1. Buka Modal Detail & Timeline Tindak Lanjut Kasus
+        window.openDetailKasusModal = function(catatanId) {
+            const item = (window.appState.catatans || []).find(c => c.id === catatanId);
+            if (!item) return;
+
+            const statusBadge = item.status === 'Selesai' ? '<span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold">Selesai</span>' :
+                                item.status === 'Skorsing' ? '<span class="px-2.5 py-1 bg-rose-100 text-rose-800 rounded-lg text-xs font-bold">Skorsing</span>' :
+                                item.status === 'Dalam Penanganan' ? '<span class="px-2.5 py-1 bg-amber-100 text-amber-800 rounded-lg text-xs font-bold">Dalam Penanganan</span>' :
+                                '<span class="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-lg text-xs font-bold">Baru</span>';
+
+            const tindakLanjutList = item.tindakLanjut || [];
+            let timelineHtml = tindakLanjutList.map((tl, idx) => `
+                <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl mb-3">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-extrabold text-xs text-indigo-700"><i class="fas fa-check-circle mr-1"></i> ${tl.jenisTindakan}</span>
+                        <span class="text-[10px] text-slate-400 font-bold">${tl.tanggal} (${tl.petugas})</span>
+                    </div>
+                    <p class="text-xs text-slate-600">${tl.hasil}</p>
+                </div>
+            `).join('');
+
+            if (!timelineHtml) {
+                timelineHtml = `<p class="text-xs text-slate-400 italic text-center py-4">Belum ada riwayat tindak lanjut atau bimbingan tercatat.</p>`;
+            }
+
+            window.openModal(`
+                <div class="p-6 sm:p-8">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-xl font-extrabold text-slate-800 flex items-center gap-2">
+                                <i class="fas fa-clipboard-check text-indigo-600"></i> Penanganan Kasus Siswa
+                            </h3>
+                            <p class="text-xs text-slate-500 font-medium">Detail pelanggaran dan riwayat bimbingan/tindak lanjut.</p>
+                        </div>
+                        <div>${statusBadge}</div>
+                    </div>
+
+                    <div class="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 mb-6 text-xs space-y-1.5">
+                        <div><strong>Nama Siswa:</strong> ${item.studentName} (NISN: ${item.nisn}) - Kelas ${item.class}</div>
+                        <div><strong>Jenis Kasus:</strong> ${item.description} (Poin: +${item.point})</div>
+                        <div><strong>Tanggal Kejadian:</strong> ${item.date} | <strong>Pelapor:</strong> ${item.reporter || '-'}</div>
+                    </div>
+
+                    <div class="mb-6">
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="text-xs font-extrabold text-slate-700 uppercase tracking-wider">Riwayat Tindak Lanjut & Pembimbingan</h4>
+                            <button onclick="window.openAddTindakLanjutModal('${item.id}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center gap-1.5">
+                                <i class="fas fa-plus"></i> Tambah Tindak Lanjut
+                            </button>
+                        </div>
+                        <div class="max-h-60 overflow-y-auto custom-scrollbar pr-1">
+                            ${timelineHtml}
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-slate-600">Ubah Status Kasus:</span>
+                            <select onchange="window.updateCaseStatus('${item.id}', this.value)" class="p-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600">
+                                <option value="Baru" ${item.status==='Baru'?'selected':''}>Baru</option>
+                                <option value="Dalam Penanganan" ${item.status==='Dalam Penanganan'?'selected':''}>Dalam Penanganan</option>
+                                <option value="Skorsing" ${item.status==='Skorsing'?'selected':''}>Skorsing / Libur Skors</option>
+                                <option value="Selesai" ${item.status==='Selesai'?'selected':''}>Selesai</option>
+                            </select>
+                        </div>
+                        <button onclick="window.closeModal()" class="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs">Tutup</button>
+                    </div>
+                </div>
+            `, 'max-w-2xl');
+        };
+
+        // 2. Form Tambah Tindak Lanjut (Pembimbingan / Skorsing)
+        window.openAddTindakLanjutModal = function(catatanId) {
+            const todayStr = getLocalDateString();
+            const defaultPetugas = (window.currentUser && window.currentUser.name) ? window.currentUser.name : 'Guru BK / Wali Kelas';
+
+            window.openModal(`
+                <div class="p-6 sm:p-8">
+                    <h3 class="text-xl font-extrabold text-slate-800 mb-2 flex items-center gap-2">
+                        <i class="fas fa-tasks text-indigo-600"></i> Catat Tindak Lanjut & Pembimbingan
+                    </h3>
+                    <p class="text-xs text-slate-500 mb-6 font-medium">Catat hasil bimbingan, klarifikasi, atau keputusan skorsing.</p>
+
+                    <form onsubmit="window.saveTindakLanjut(event, '${catatanId}')" class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Jenis Tindakan</label>
+                                <select id="tl-jenis" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600" required>
+                                    <option value="Teguran Lisan / Klarifikasi">Teguran Lisan / Klarifikasi</option>
+                                    <option value="Pembimbingan Konseling (BK)">Pembimbingan Konseling (BK)</option>
+                                    <option value="Pemanggilan Orang Tua / Wali">Pemanggilan Orang Tua / Wali</option>
+                                    <option value="Surat Peringatan (SP)">Surat Peringatan (SP)</option>
+                                    <option value="Skorsing Sementara">Skorsing Sementara</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Tanggal Tindakan</label>
+                                <input type="date" id="tl-tanggal" value="${todayStr}" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600" required>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Petugas / Guru Pendamping</label>
+                            <input type="text" id="tl-petugas" value="${defaultPetugas}" class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600" required>
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-bold text-slate-600 uppercase mb-2 block">Hasil Pembimbingan / Kesepakatan / Keterangan</label>
+                            <textarea id="tl-hasil" rows="3" placeholder="Tuliskan hasil bimbingan, komitmen siswa, atau tanggapan orang tua..." class="w-full p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-sm outline-none focus:border-indigo-600" required></textarea>
+                        </div>
+
+                        <div class="pt-4 flex justify-end gap-3 border-t border-slate-100">
+                            <button type="button" onclick="window.openDetailKasusModal('${catatanId}')" class="px-5 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl text-xs">Kembali</button>
+                            <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs shadow-md">Simpan Tindak Lanjut</button>
+                        </div>
+                    </form>
+                </div>
+            `, 'max-w-lg');
+        };
+
+        window.saveTindakLanjut = async function(e, catatanId) {
+            e.preventDefault();
+            const item = (window.appState.catatans || []).find(c => c.id === catatanId);
+            if (!item) return;
+
+            const jenisTindakan = document.getElementById('tl-jenis').value;
+            const tanggal = document.getElementById('tl-tanggal').value;
+            const petugas = document.getElementById('tl-petugas').value.trim();
+            const hasil = document.getElementById('tl-hasil').value.trim();
+
+            const newTindakLanjut = {
+                tanggal: tanggal,
+                jenisTindakan: jenisTindakan,
+                petugas: petugas,
+                hasil: hasil
+            };
+
+            if (!item.tindakLanjut) item.tindakLanjut = [];
+            item.tindakLanjut.push(newTindakLanjut);
+            item.status = 'Dalam Penanganan';
+
+            // Simpan ke Cloud Firestore
+            const res = await window.saveDataToCloud('catatans', item, item.id);
+            if (res) {
+                // =========================================================
+                // KIRIM NOTIFIKASI WHATSAPP OTOMATIS KE ORANG TUA / WALI MURID
+                // =========================================================
+                const studentObj = (window.appState.students || []).find(s => s.nisn === item.nisn);
+                const parentPhone = studentObj ? (studentObj.phone || studentObj.hpOrtu || studentObj.noHp) : null;
+
+                if (parentPhone && parentPhone !== '-') {
+                    const waMessage = `*NOTIFIKASI TINDAK LANJUT KASUS SISWA*\n` +
+                                    `=============================\n` +
+                                    `Nama Siswa : *${item.studentName}*\n` +
+                                    `Kelas      : ${item.class}\n` +
+                                    `Kasus      : ${item.description}\n` +
+                                    `-----------------------------\n` +
+                                    `*Tindakan*  : ${jenisTindakan}\n` +
+                                    `*Tanggal*   : ${tanggal}\n` +
+                                    `*Petugas*   : ${petugas}\n` +
+                                    `*Hasil/Catatan*: ${hasil}\n` +
+                                    `*Status*    : Dalam Penanganan\n` +
+                                    `=============================\n` +
+                                    `_Pesan otomatis dari ${window.appState.settings.schoolName || 'Sistem Sekolah'}._`;
+
+                    window.sendWaNotification(parentPhone, waMessage);
+                }
+                // =========================================================
+
+                window.showToast("Tindak lanjut berhasil disimpan & notifikasi WA terkirim!", "success");
+                window.openDetailKasusModal(catatanId);
+            }
+        };
+
+        window.updateCaseStatus = async function(catatanId, newStatus) {
+            const item = (window.appState.catatans || []).find(c => c.id === catatanId);
+            if (!item) return;
+
+            item.status = newStatus;
+            const res = await window.saveDataToCloud('catatans', item, item.id);
+            if (res) {
+                window.showToast(`Status kasus diubah menjadi: ${newStatus}`, "success");
+            }
+        };
+
     /* --- HALAMAN CATATAN KEDISIPLINAN --- */
 	window.renderCatatan = () => {
     const content = document.getElementById('main-content');
@@ -6001,6 +6190,10 @@ window.renderAcademicModalHistory = (nisn) => {
             <td class="p-4 font-black text-emerald-600 text-base text-center">+${c.point}</td>
             <td class="p-4 text-slate-500 text-xs">${c.date || '-'}</td>
             <td class="p-4 text-center">
+                <div class="flex items-center justify-center gap-2">
+                <button onclick="window.openDetailKasusModal('${c.id}')" class="px-3 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg font-bold text-xs transition-all flex items-center gap-1 border border-indigo-200" title="Detail & Tindak Lanjut">
+                    <i class="fas fa-clipboard-list"></i> Penanganan
+                </button>
                 ${isAdmin ? `
                     <button onclick="window.confirmDelete('catatans', '${c.id}', 'catatan')" class="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg font-bold text-xs" title="Hapus Catatan"><i class="fas fa-trash-alt"></i></button>
                 ` : '-'}
@@ -6071,16 +6264,35 @@ window.renderCatatanModalHistory = (nisn) => {
     const student = window.appState.students.find(s => s.nisn === nisn);
     const history = (window.appState.catatans || []).filter(c => c.nisn === nisn);
 
-    let rows = history.slice().reverse().map((c, idx) => `
-        <tr class="border-b border-slate-100 text-xs">
-            <td class="p-2 text-center text-slate-400 font-bold">${idx + 1}</td>
-            <td class="p-2 uppercase text-[10px] font-extrabold ${c.category==='pelanggaran'?'text-amber-600':c.category==='prestasi'?'text-emerald-600':'text-blue-600'}">${c.category}</td>
-            <td class="p-2 text-slate-700 font-medium">${c.description}</td>
-            <!-- PERUBAHAN: Tanda poin diubah menjadi (+) positif -->
-            <td class="p-2 text-center font-black text-emerald-600">+${c.point}</td>
-            <td class="p-2 text-slate-500">${c.date || '-'}</td>
-        </tr>
-    `).join('');
+    let rows = history.slice().reverse().map((c, idx) => {
+        // Menggabungkan kode asli Anda dengan bagian tambahan riwayat tindak lanjut
+        const tindakLanjutList = c.tindakLanjut || [];
+        let tlHtml = '';
+        if (tindakLanjutList.length > 0) {
+            tlHtml = `<div class="mt-1.5 pt-1.5 border-t border-slate-100 space-y-1">
+                <span class="text-[9px] font-extrabold text-indigo-700 uppercase tracking-wider block"><i class="fas fa-tasks mr-1"></i> Riwayat Penanganan:</span>
+                ${tindakLanjutList.map(tl => `
+                    <div class="text-[10px] text-slate-600 bg-indigo-50/60 p-1.5 rounded border border-indigo-100">
+                        <strong>${tl.jenisTindakan}</strong> (${tl.tanggal}):${tl.hasil} <span class="text-slate-400">(${tl.petugas})</span>
+                    </div>
+                `).join('')}
+            </div>`;
+        }
+
+        return `
+            <tr class="border-b border-slate-100 text-xs align-top">
+                <td class="p-2 text-center text-slate-400 font-bold">${idx + 1}</td>
+                <td class="p-2 uppercase text-[10px] font-extrabold ${c.category==='pelanggaran'?'text-amber-600':c.category==='prestasi'?'text-emerald-600':'text-blue-600'}">${c.category}</td>
+                <td class="p-2 text-slate-700 font-medium">
+                    <div>${c.description}</div>
+                    ${tlHtml}
+                </td>
+                <!-- PERUBAHAN: Tanda poin diubah menjadi (+) positif -->
+                <td class="p-2 text-center font-black text-emerald-600">+${c.point}</td>
+                <td class="p-2 text-slate-500">${c.date || '-'}</td>
+            </tr>
+        `;
+    }).join('');
 
     if (!history.length) {
         rows = `<tr><td colspan="5" class="p-4 text-center text-slate-400 italic text-xs">Belum ada riwayat catatan untuk siswa ini.</td></tr>`;
