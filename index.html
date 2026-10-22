@@ -1146,6 +1146,7 @@ const recordLoginLog = async (userObj) => {
             roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA],
             items: [
                 { id: 'academics', icon: 'fa-book-open', text: 'Akademik & Nilai', roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA] },
+                { id: 'analytics', icon: 'fa-chart-bar', text: 'Analisis & Analitik Akademik', roles: [ROLES.ADMIN, ...(isWaliKelas ? [ROLES.GURU] : [])] }, // <-- TAMBAHAN MENU BARU
                 { id: 'catatan', icon: 'fa-clipboard-list', text: 'Catatan Siswa', roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA] },
                 { id: 'cbt', icon: 'fa-laptop-code', text: 'Ujian CBT', roles: [ROLES.ADMIN, ROLES.GURU, ROLES.SISWA] }
             ]
@@ -1724,6 +1725,7 @@ window.ensureTeacherHasSubject = function(teacherId, subjectName) {
             else if (pageId === 'schedules') window.renderSchedules();
             else if (pageId === 'announcements') window.renderAnnouncements();
 			else if (pageId === 'cbt') window.renderCBT(); // <-- TARUH DI SINI
+            else if (pageId === 'analytics') window.renderStudentAnalytics(); // <-- TAMBAHAN ROUTING
             else if (pageId === 'recap') window.renderRecapData();
             else if (pageId === 'laporan') window.renderLaporan();
             else if (pageId === 'rapot_sts') window.renderRapotSTS();
@@ -5226,6 +5228,378 @@ window.isTeacherAuthorizedForClassAndSubject = function(targetClass, targetSubje
     
     return false;
 };
+
+        // =========================================================
+        // KODE BARU: MENU TERPISAH ANALISIS & ANALITIK AKADEMIK
+        // ========================================================
+
+        // Fungsi Render Halaman Menu Utama Analisis Akademik
+        if (!window.analyticsClassFilter) {
+            window.analyticsClassFilter = 'Semua';
+        }
+
+        // Kalkulator Analitik Akademik per Siswa
+        window.getStudentAcademicAnalytics = function(nisn) {
+            const academics = (window.appState.academics || []).filter(a => a.nisn === nisn);
+            
+            // Urutkan data secara kronologis berdasarkan waktu pembuatan/pencatatan nilai
+            academics.sort((a, b) => new Date(a.createdAt || a.updatedAt || 0) - new Date(b.createdAt || b.updatedAt || 0));
+
+            const subjectMap = {};
+            const typeMap = {};
+            let totalScore = 0;
+            let count = academics.length;
+
+            academics.forEach(a => {
+                const subj = a.subject || 'Lainnya';
+                const type = a.type || a.assessmentType || 'Tugas Harian';
+                const score = parseFloat(a.score) || 0;
+                
+                totalScore += score;
+
+                // Agregasi kronologis per Mata Pelajaran
+                if (!subjectMap[subj]) subjectMap[subj] = { scores: [], total: 0, count: 0 };
+                subjectMap[subj].scores.push({ 
+                    type, 
+                    score, 
+                    materi: a.materi || a.note || '-',
+                    date: a.createdAt ? new Date(a.createdAt).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'}) : ''
+                });
+                subjectMap[subj].total += score;
+                subjectMap[subj].count += 1;
+
+                // Agregasi per Jenis Penilaian
+                if (!typeMap[type]) typeMap[type] = { total: 0, count: 0 };
+                typeMap[type].total += score;
+                typeMap[type].count += 1;
+            });
+
+            // Analisis Tren per Mapel (Membandingkan nilai awal vs nilai akhir/terbaru)
+            const subjectAverages = {};
+            let risingSubjects = 0;
+            let decliningSubjects = 0;
+
+            Object.keys(subjectMap).forEach(subj => {
+                const data = subjectMap[subj];
+                const avg = parseFloat((data.total / data.count).toFixed(1));
+                const scoresList = data.scores.map(s => s.score);
+                
+                let trend = 'stabil';
+                if (scoresList.length >= 2) {
+                    const firstScore = scoresList[0];
+                    const latestScore = scoresList[scoresList.length - 1];
+                    if (latestScore > firstScore) {
+                        trend = 'naik';
+                        risingSubjects++;
+                    } else if (latestScore < firstScore) {
+                        trend = 'turun';
+                        decliningSubjects++;
+                    }
+                }
+
+                subjectAverages[subj] = {
+                    average: avg,
+                    details: data.scores,
+                    count: data.count,
+                    trend: trend // 'naik', 'turun', atau 'stabil'
+                };
+            });
+
+            const typeAverages = {};
+            Object.keys(typeMap).forEach(type => {
+                typeAverages[type] = {
+                    average: parseFloat((typeMap[type].total / typeMap[type].count).toFixed(1)),
+                    count: typeMap[type].count
+                };
+            });
+
+            const overallAverage = count > 0 ? parseFloat((totalScore / count).toFixed(1)) : 0;
+
+            let sortedSubjects = Object.keys(subjectAverages).map(subj => ({
+                subject: subj,
+                avg: subjectAverages[subj].average
+            })).sort((a, b) => b.avg - a.avg);
+
+            let weakestSubject = sortedSubjects.length > 0 ? sortedSubjects[sortedSubjects.length - 1] : null;
+
+            // Rekomendasi Profesional Berbasis Tren
+            let recommendations = [];
+            if (overallAverage >= 88) {
+                recommendations.push("Performa akademik sangat konsisten dan gemilang. Pertahankan prestasi dan motivasi belajar.");
+            } else if (overallAverage >= 75) {
+                recommendations.push("Pencapaian akademik tuntas dan baik secara umum.");
+                if (decliningSubjects > 0) {
+                    recommendations.push(`Terdeteksi ada ${decliningSubjects} mata pelajaran yang mengalami penurunan nilai. Perlu evaluasi kebiasaan belajar siswa di rumah.`);
+                } else {
+                    recommendations.push("Tren nilai cenderung stabil atau menunjukkan peningkatan positif.");
+                }
+            } else {
+                recommendations.push("Membutuhkan perhatian khusus serta bimbingan intensif (remedial) karena rata-rata berada di bawah KKM (< 75).");
+            }
+
+            if (weakestSubject && weakestSubject.avg < 75) {
+                recommendations.push(`Fokus bimbingan utama diarahkan pada mata pelajaran **${weakestSubject.subject}** (Rata-rata: ${weakestSubject.avg}).`);
+            }
+
+            return {
+                overallAverage,
+                subjectAverages,
+                typeAverages,
+                weakestSubject,
+                recommendations,
+                totalEvaluations: count
+            };
+        };
+
+        // =========================================================
+        // FUNGSI RENDER HALAMAN ANALISIS & ANALITIK AKADEMIK
+        // =========================================================
+        window.renderStudentAnalytics = function() {
+            const content = document.getElementById('main-content');
+            if (!content) return;
+
+            const isSiswa = window.currentUser.role === ROLES.SISWA;
+            const isGuru = window.currentUser.role === ROLES.GURU;
+            const isAdmin = window.currentUser.role === ROLES.ADMIN;
+
+            const allClasses = [...new Set((window.appState.students || []).map(s => s.class))].sort();
+            
+            // Tentukan kelas yang diizinkan untuk guru
+            let teacherClasses = [];
+            if (isGuru) {
+                const assignments = window.currentUser.data?.teacherAssignments || {};
+                teacherClasses = Object.keys(assignments).length > 0 
+                    ? Object.keys(assignments).sort() 
+                    : ((window.currentUser.classes && window.currentUser.classes.length > 0) ? window.currentUser.classes.sort() : []);
+            } else if (isAdmin) {
+                teacherClasses = allClasses;
+            }
+
+            if (!window.analyticsClassFilter || (isGuru && !teacherClasses.includes(window.analyticsClassFilter) && window.analyticsClassFilter !== 'Semua')) {
+                window.analyticsClassFilter = isGuru ? (teacherClasses[0] || 'Semua') : 'Semua';
+            }
+
+            let students = window.getFilteredStudents();
+            if (window.analyticsClassFilter && window.analyticsClassFilter !== 'Semua') {
+                students = students.filter(s => s.class === window.analyticsClassFilter);
+            }
+            students = sortSiswaByName(students);
+
+            // Hitung ringkasan analitik per siswa
+            let studentAnalyticsRows = students.map((s, idx) => {
+                const analytics = window.getStudentAcademicAnalytics(s.nisn);
+                const statusBadge = analytics.overallAverage >= 75 
+                    ? '<span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold">Tuntas / Baik</span>'
+                    : '<span class="px-2.5 py-1 bg-amber-100 text-amber-800 rounded-lg text-xs font-bold">Perlu Bimbingan</span>';
+
+                return `
+                    <tr class="hover:bg-slate-50 border-b border-slate-100 text-xs sm:text-sm">
+                        <td class="p-4 text-center font-bold text-slate-400">${idx + 1}</td>
+                        <td class="p-4">
+                            <div class="flex items-center gap-3">
+                                <img src="${s.photo || `https://placehold.co/100x100/4f46e5/ffffff?text=${(s.name || 'S').charAt(0)}`}" class="w-9 h-9 rounded-full object-cover border border-slate-200">
+                                <div>
+                                    <p class="font-extrabold text-slate-800">${s.name}</p>
+                                    <p class="text-[10px] text-slate-400">NISN: ${s.nisn}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="p-4 font-bold text-indigo-600 text-center">Kelas ${s.class}</td>
+                        <td class="p-4 text-center font-black text-slate-900 text-base">${analytics.overallAverage}</td>
+                        <td class="p-4 text-center">${statusBadge}</td>
+                        <td class="p-4 text-center font-medium text-slate-600">${analytics.totalEvaluations} Kali</td>
+                        <td class="p-4 text-center">
+                            <button onclick="window.openStudentAcademicAnalyticsModal('${s.nisn}')" class="px-3.5 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 mx-auto border border-indigo-200">
+                                <i class="fas fa-chart-line"></i> Detail Analisis
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            if (!students.length) {
+                studentAnalyticsRows = `<tr><td colspan="7" class="p-8 text-center text-slate-400 font-semibold">Tidak ada data siswa ditemukan untuk kelas ini.</td></tr>`;
+            }
+
+            const classOptionsHtml = (isGuru ? teacherClasses : ['Semua', ...allClasses]).map(c => `
+                <option value="${c}" ${c === window.analyticsClassFilter ? 'selected' : ''}>${c === 'Semua' ? 'Semua Kelas' : 'Kelas ' + c}</option>
+            `).join('');
+
+            content.innerHTML = `
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 slide-up">
+                    <div>
+                        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">Analisis & Analitik Akademik Siswa</h2>
+                        <p class="text-xs sm:text-sm text-slate-500 font-medium">Pantau tren perkembangan nilai, rata-rata, dan rekomendasi bimbingan akademik per siswa.</p>
+                    </div>
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <span class="text-xs font-bold text-slate-500 whitespace-nowrap"><i class="fas fa-filter text-indigo-500"></i> Kelas:</span>
+                        <select onchange="window.analyticsClassFilter = this.value; window.renderStudentAnalytics();" class="p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-xs text-slate-700 outline-none focus:border-indigo-600 shadow-sm">
+                            ${classOptionsHtml}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden slide-up">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[700px]">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 uppercase tracking-wider text-[11px] font-extrabold border-b border-slate-100">
+                                    <th class="p-4 text-center w-12">No</th>
+                                    <th class="p-4">Nama Siswa</th>
+                                    <th class="p-4 text-center">Kelas</th>
+                                    <th class="p-4 text-center">Rata-Rata Umum</th>
+                                    <th class="p-4 text-center">Status Performa</th>
+                                    <th class="p-4 text-center">Total Evaluasi</th>
+                                    <th class="p-4 text-center">Aksi Analisis</th>
+                                </tr>
+                            </thead>
+                            <tbody>${studentAnalyticsRows}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        };
+        
+        // Modal Rinci Analisis & Tren Perkembangan Nilai Siswa (Tampilan Premium)
+        window.openStudentAcademicAnalyticsModal = function(nisn) {
+            const student = (window.appState.students || []).find(s => s.nisn === nisn);
+            if (!student) return;
+
+            const analytics = window.getStudentAcademicAnalytics(nisn);
+
+            let subjectCardsHtml = Object.keys(analytics.subjectAverages).map(subj => {
+                const data = analytics.subjectAverages[subj];
+                
+                // Indikator Tren Visual yang Menarik
+                let trendBadge = '';
+                if (data.trend === 'naik') {
+                    trendBadge = `<span class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-lg text-[10px] font-extrabold"><i class="fas fa-arrow-trend-up"></i> Meningkat</span>`;
+                } else if (data.trend === 'turun') {
+                    trendBadge = `<span class="inline-flex items-center gap-1 bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-1 rounded-lg text-[10px] font-extrabold"><i class="fas fa-arrow-trend-down"></i> Menurun</span>`;
+                } else {
+                    trendBadge = `<span class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg text-[10px] font-extrabold"><i class="fas fa-minus"></i> Stabil</span>`;
+                }
+
+                const avgBadgeColor = data.average >= 75 ? 'bg-indigo-600 text-white' : 'bg-amber-500 text-white';
+
+                // Riwayat Timeline Skor per Mapel
+                const timelineItems = data.details.map((d, i) => `
+                    <div class="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-slate-200/80 text-xs shadow-2xs">
+                        <div class="flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-600 font-bold text-[10px] flex items-center justify-center">${i + 1}</span>
+                            <div>
+                                <span class="font-bold text-slate-800">${d.type}</span>
+                                <span class="text-[10px] text-slate-400 block">${d.materi} ${d.date ? '• ' + d.date : ''}</span>
+                            </div>
+                        </div>
+                        <span class="font-black text-slate-900 px-2.5 py-0.5 rounded-md bg-slate-100">${d.score}</span>
+                    </div>
+                `).join('');
+
+                return `
+                    <div class="bg-slate-50/70 p-4 rounded-2xl border border-slate-200/80 mb-4 transition-all hover:shadow-sm">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-2.5 border-b border-slate-200/60">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center font-black text-xs ${avgBadgeColor} shadow-xs">
+                                    ${data.average}
+                                </div>
+                                <div>
+                                    <h5 class="font-extrabold text-slate-800 text-sm">${subj}</h5>
+                                    <span class="text-[10px] text-slate-400 font-medium">${data.count} Kali Evaluasi Tercatat</span>
+                                </div>
+                            </div>
+                            <div>${trendBadge}</div>
+                        </div>
+                        <div class="space-y-1.5 pl-1">
+                            <p class="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider mb-1">Riwayat & Perkembangan Nilai:</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                ${timelineItems}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            if (!subjectCardsHtml) {
+                subjectCardsHtml = `<div class="p-8 text-center text-slate-400 font-semibold bg-slate-50 rounded-2xl border border-slate-200">Belum ada data nilai akademik tercatat untuk siswa ini.</div>`;
+            }
+
+            let typeBreakdownHtml = Object.keys(analytics.typeAverages).map(type => {
+                const data = analytics.typeAverages[type];
+                return `
+                    <div class="bg-white p-3 rounded-2xl border border-slate-200/80 text-center shadow-2xs">
+                        <p class="text-[10px] text-slate-400 uppercase font-extrabold mb-0.5">${type}</p>
+                        <p class="text-base font-black text-indigo-700">${data.average}</p>
+                        <span class="text-[9px] text-slate-400">${data.count} Penilaian</span>
+                    </div>
+                `;
+            }).join('');
+
+            let recsHtml = analytics.recommendations.map(r => `
+                <li class="flex items-start gap-2.5 text-xs text-slate-700 mb-2 font-medium">
+                    <div class="w-4 h-4 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0 mt-0.5 text-[9px]">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <span>${r}</span>
+                </li>
+            `).join('');
+
+            window.openModal(`
+                <div class="p-6 sm:p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
+                    <!-- Header Modal -->
+                    <div class="flex justify-between items-start mb-6 pb-4 border-b border-slate-100">
+                        <div>
+                            <span class="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-black uppercase tracking-wider border border-indigo-100">
+                                Analisis Perkembangan Akademik
+                            </span>
+                            <h3 class="text-xl font-black text-slate-900 mt-2">${student.name}</h3>
+                            <p class="text-xs text-slate-500 font-medium">NISN: ${student.nisn} &bull; Rombel Kelas ${student.class}</p>
+                        </div>
+                        <div class="bg-indigo-600 text-white px-4 py-2.5 rounded-2xl text-center shadow-md shadow-indigo-600/20">
+                            <span class="text-[9px] uppercase font-extrabold tracking-wider block text-indigo-200">Rata-Rata Umum</span>
+                            <span class="text-xl font-black">${analytics.overallAverage}</span>
+                        </div>
+                    </div>
+
+                    <!-- Rata-rata Jenis Penilaian -->
+                    <div class="mb-6">
+                        <h4 class="text-xs font-black text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <i class="fas fa-layer-group text-indigo-600"></i> Rekapitulasi per Jenis Penilaian
+                        </h4>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            ${typeBreakdownHtml || '<p class="text-xs text-slate-400 italic">Belum ada data jenis penilaian.</p>'}
+                        </div>
+                    </div>
+
+                    <!-- Tren & Rincian Nilai per Mata Pelajaran -->
+                    <div class="mb-6">
+                        <h4 class="text-xs font-black text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <i class="fas fa-chart-line text-indigo-600"></i> Tren Perkembangan Nilai per Mata Pelajaran
+                        </h4>
+                        <div class="max-h-80 overflow-y-auto pr-1 custom-scrollbar space-y-2">
+                            ${subjectCardsHtml}
+                        </div>
+                    </div>
+
+                    <!-- Rekomendasi Tindak Lanjut -->
+                    <div class="bg-amber-50/80 p-5 rounded-2xl border border-amber-200/80 mb-6 shadow-2xs">
+                        <h4 class="text-xs font-black text-amber-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <i class="fas fa-lightbulb text-amber-600 text-base"></i> Rekomendasi Tindak Lanjut Wali Kelas
+                        </h4>
+                        <ul class="list-none pl-0 space-y-1">
+                            ${recsHtml}
+                        </ul>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="flex justify-end pt-2">
+                        <button onclick="window.closeModal()" class="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs shadow-md transition-all">
+                            Tutup Jendela Analisis
+                        </button>
+                    </div>
+                </div>
+            `, 'max-w-3xl');
+        };
 
 window.renderAcademics = () => {
             const content = document.getElementById('main-content');
