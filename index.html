@@ -799,25 +799,41 @@
     }
 };
 
+        // Memuat seluruh koleksi secara paralel agar waktu tunggu tidak menumpuk.
+        // Setiap koleksi tetap ditangani sendiri supaya kegagalan satu koleksi
+        // tidak menghentikan pemuatan koleksi lainnya.
         const loadAllDataFromCloud = async () => {
-    if(!window.db) return;
-    const colls = ['students', 'teachers', 'attendance', 'payments', 'academics', 'catatans', 'schedules', 'announcements', 'homerooms', 'teacherAttendance', 'cbtExams'];
-    for (let c of colls) {
-        try {
-            const snap = await window.fs.getDocs(window.fs.collection(window.db, c));
-            const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            
-            // PERBAIKAN: Selalu update state meskipun docs.length === 0
-            window.appState[c] = docs; 
-        } catch(e) { 
-            console.error(`Gagal load ${c}`, e); 
-        }
-    }
-    try {
-        const snapSet = await window.fs.getDoc(window.fs.doc(window.db, "settings", "main"));
-        if (snapSet.exists()) window.appState.settings = { ...window.appState.settings, ...snapSet.data() };
-    } catch(e){}
-};
+            if (!window.db || !window.fs) return;
+
+            const colls = [
+                'students', 'teachers', 'attendance', 'payments', 'academics',
+                'catatans', 'schedules', 'announcements', 'homerooms',
+                'teacherAttendance', 'cbtExams'
+            ];
+
+            const collectionTasks = colls.map(async (c) => {
+                try {
+                    const snap = await window.fs.getDocs(window.fs.collection(window.db, c));
+                    // Tetap update state meskipun koleksi memang kosong.
+                    window.appState[c] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                } catch (e) {
+                    console.error(`Gagal load ${c}`, e);
+                }
+            });
+
+            const settingsTask = (async () => {
+                try {
+                    const snapSet = await window.fs.getDoc(window.fs.doc(window.db, 'settings', 'main'));
+                    if (snapSet.exists()) {
+                        window.appState.settings = { ...window.appState.settings, ...snapSet.data() };
+                    }
+                } catch (e) {
+                    console.error('Gagal load settings', e);
+                }
+            })();
+
+            await Promise.all([...collectionTasks, settingsTask]);
+        };
 
         // =========================================================
         // KODE BARU: STATE & FUNGSI PENCATATAN RIWAYAT LOGIN
@@ -10653,6 +10669,582 @@ window.downloadTeacherAttendanceWord = function() {
             URL.revokeObjectURL(url);
             window.showToast("Berhasil mengunduh Leger STS Word!", "success");
         };
-    </script>
+    
+        // =========================================================
+        // PATCH TAMBAHAN CATATAN SISWA & PENANGANAN KASUS
+        // Aman ditambahkan di akhir script type="module".
+        // Tidak mengubah struktur koleksi Firestore yang sudah ada.
+        // =========================================================
+        (() => {
+            const esc = (v) => String(v ?? '').replace(/[&<>"']/g, ch => ({
+                '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+            }[ch]));
+
+            const isAdmin = () => String(window.currentUser?.role || '').toLowerCase() === 'admin';
+            const isStudent = () => String(window.currentUser?.role || '').toLowerCase() === 'siswa';
+
+            // 1. Perbaiki tanda poin di tabel utama: pelanggaran negatif.
+            const oldRenderCatatan = window.renderCatatan;
+            if (typeof oldRenderCatatan === 'function') {
+                window.renderCatatan = function(...args) {
+                    const result = oldRenderCatatan.apply(this, args);
+                    const tbody = document.querySelector('#main-content table tbody');
+                    if (tbody) {
+                        [...tbody.rows].forEach(row => {
+                            const category = (row.cells[2]?.innerText || '').trim().toLowerCase();
+                            const pointCell = row.cells[4];
+                            if (!pointCell || !['pelanggaran','prestasi','perkembangan'].includes(category)) return;
+                            const raw = Number(String(pointCell.innerText).replace(/[^\d.-]/g, '')) || 0;
+                            if (category === 'pelanggaran') {
+                                pointCell.textContent = raw ? `-${Math.abs(raw)}` : '0';
+                                pointCell.className = 'p-4 font-black text-rose-600 text-base text-center';
+                            } else if (category === 'prestasi') {
+                                pointCell.textContent = `+${Math.abs(raw)}`;
+                                pointCell.className = 'p-4 font-black text-emerald-600 text-base text-center';
+                            } else {
+                                pointCell.textContent = '—';
+                                pointCell.className = 'p-4 font-black text-slate-400 text-base text-center';
+                            }
+                        });
+                    }
+                    return result;
+                };
+            }
+
+            // 2. Perbaiki tanda poin pada riwayat di formulir input.
+            const oldHistory = window.renderCatatanModalHistory;
+            if (typeof oldHistory === 'function') {
+                window.renderCatatanModalHistory = function(nisn, ...args) {
+                    const result = oldHistory.call(this, nisn, ...args);
+                    const box = document.getElementById('cat-modal-history');
+                    const tbody = box?.querySelector('tbody');
+                    if (tbody) {
+                        [...tbody.rows].forEach(row => {
+                            const category = (row.cells[1]?.innerText || '').trim().toLowerCase();
+                            const pointCell = row.cells[3];
+                            if (!pointCell) return;
+                            const raw = Number(String(pointCell.innerText).replace(/[^\d.-]/g, '')) || 0;
+                            if (category === 'pelanggaran') {
+                                pointCell.textContent = raw ? `-${Math.abs(raw)}` : '0';
+                                pointCell.className = 'p-2 text-center font-black text-rose-600';
+                            } else if (category === 'prestasi') {
+                                pointCell.textContent = `+${Math.abs(raw)}`;
+                            } else {
+                                pointCell.textContent = '—';
+                                pointCell.className = 'p-2 text-center font-black text-slate-400';
+                            }
+                        });
+                    }
+                    return result;
+                };
+            }
+
+            // 3. Batasi kontrol penanganan hanya untuk catatan pelanggaran.
+            // Siswa hanya melihat informasi, tidak menambah tindak lanjut/mengubah status.
+            const oldOpenDetail = window.openDetailKasusModal;
+            if (typeof oldOpenDetail === 'function') {
+                window.openDetailKasusModal = function(catatanId, ...args) {
+                    const item = (window.appState.catatans || []).find(c => c.id === catatanId);
+                    if (!item) return;
+                    oldOpenDetail.call(this, catatanId, ...args);
+
+                    const modal = document.getElementById('modal-content');
+                    if (!modal) return;
+                    const addButton = [...modal.querySelectorAll('button')].find(b =>
+                        (b.innerText || '').toLowerCase().includes('tambah tindak lanjut')
+                    );
+                    const statusSelect = modal.querySelector('select[onchange*="updateCaseStatus"]');
+
+                    if (item.category !== 'pelanggaran' || isStudent()) {
+                        if (addButton) addButton.remove();
+                        if (statusSelect) statusSelect.disabled = true;
+                    } else if (!isAdmin() && statusSelect) {
+                        statusSelect.disabled = true;
+                        statusSelect.title = 'Perubahan status hanya dapat dilakukan Admin/Kepala Madrasah.';
+                    }
+
+                    // Tampilkan jejak perubahan status, bila sudah ada.
+                    const audit = Array.isArray(item.statusHistory) ? item.statusHistory : [];
+                    if (audit.length) {
+                        const auditHtml = audit.slice().sort((a,b) =>
+                            String(b.changedAt || '').localeCompare(String(a.changedAt || ''))
+                        ).map(a => `
+                            <div class="text-xs p-2 rounded-lg bg-slate-50 border border-slate-200 mb-2">
+                                <strong>${esc(a.status || '-')}</strong> — ${esc(a.changedAt || '-')}
+                                <div class="text-slate-500">Oleh: ${esc(a.by || '-')} (${esc(a.role || '-')})</div>
+                                <div class="text-slate-600">${esc(a.note || '-')}</div>
+                            </div>
+                        `).join('');
+                        const section = document.createElement('section');
+                        section.className = 'mt-4 pt-4 border-t border-slate-100';
+                        section.innerHTML = `<h4 class="text-xs font-extrabold uppercase text-slate-700 mb-2">Jejak Perubahan Status</h4>${auditHtml}`;
+                        modal.querySelector('.p-6, .sm\\:p-8')?.appendChild(section) || modal.appendChild(section);
+                    }
+                };
+            }
+
+            // 4. Tindak lanjut mencatat tahap dan identitas petugas.
+            const oldSaveTindakLanjut = window.saveTindakLanjut;
+            window.saveTindakLanjut = async function(e, catatanId) {
+                e.preventDefault();
+                const item = (window.appState.catatans || []).find(c => c.id === catatanId);
+                if (!item) return;
+                if (item.category !== 'pelanggaran') {
+                    window.showToast('Tindak lanjut hanya tersedia untuk catatan pelanggaran.', 'error');
+                    return;
+                }
+                if (isStudent()) {
+                    window.showToast('Siswa tidak memiliki izin mencatat tindak lanjut.', 'error');
+                    return;
+                }
+                const originalRole = String(window.currentUser?.role || 'guru').toLowerCase();
+                const actor = window.currentUser?.name || 'Petugas';
+                const jenis = document.getElementById('tl-jenis')?.value || '';
+                const tanggal = document.getElementById('tl-tanggal')?.value || '';
+                const petugas = document.getElementById('tl-petugas')?.value.trim() || actor;
+                const hasil = document.getElementById('tl-hasil')?.value.trim() || '';
+                if (!tanggal || !jenis || !hasil) {
+                    window.showToast('Lengkapi tanggal, jenis tindakan, dan hasil pembimbingan.', 'error');
+                    return;
+                }
+                if (!Array.isArray(item.tindakLanjut)) item.tindakLanjut = [];
+                item.tindakLanjut.push({
+                    tanggal, jenisTindakan: jenis, petugas, hasil,
+                    tahap: originalRole === 'admin' ? 'Kepala Madrasah' : 'Guru / Wali Kelas',
+                    actorRole: originalRole,
+                    createdAt: new Date().toISOString()
+                });
+                item.status = 'Dalam Penanganan';
+                if (!Array.isArray(item.statusHistory)) item.statusHistory = [];
+                item.statusHistory.push({
+                    status: 'Dalam Penanganan',
+                    by: actor, role: originalRole,
+                    note: `Tindak lanjut: ${jenis}`,
+                    changedAt: new Date().toISOString()
+                });
+
+                const res = await window.saveDataToCloud('catatans', item, item.id);
+                if (res) {
+                    const student = (window.appState.students || []).find(s => s.nisn === item.nisn);
+                    const phone = student?.phone || student?.hpOrtu || student?.noHp;
+                    if (phone && phone !== '-') {
+                        const message = `*TINDAK LANJUT CATATAN SISWA*\\nNama: ${item.studentName}\\nKelas: ${item.class}\\nKasus: ${item.description}\\nTindakan: ${jenis}\\nTanggal: ${tanggal}\\nPetugas: ${petugas}\\nHasil: ${hasil}\\nStatus: Dalam Penanganan\\n- ${window.appState.settings.schoolName}`;
+                        window.sendWaNotification(phone, message);
+                    }
+                    window.showToast('Tindak lanjut berhasil disimpan.', 'success');
+                    window.openDetailKasusModal(catatanId);
+                }
+            };
+
+            // 5. Status Skorsing hanya dapat disahkan Admin (Kepala Madrasah).
+            // Setiap perubahan status disimpan sebagai jejak audit.
+            window.updateCaseStatus = async function(catatanId, newStatus) {
+                const item = (window.appState.catatans || []).find(c => c.id === catatanId);
+                if (!item) return;
+                if (isStudent()) {
+                    window.showToast('Anda tidak memiliki izin mengubah status kasus.', 'error');
+                    return;
+                }
+                if (item.category !== 'pelanggaran') {
+                    window.showToast('Status penanganan hanya berlaku untuk pelanggaran.', 'error');
+                    return;
+                }
+                if (!isAdmin()) {
+                    window.showToast('Perubahan status resmi hanya dapat dilakukan Admin/Kepala Madrasah.', 'error');
+                    window.openDetailKasusModal(catatanId);
+                    return;
+                }
+                let note = '';
+                if (newStatus === 'Skorsing') {
+                    note = window.prompt('Masukkan dasar/alasan persetujuan skorsing Kepala Madrasah:') || '';
+                    if (!note.trim()) {
+                        window.showToast('Skorsing dibatalkan: alasan persetujuan wajib diisi.', 'error');
+                        window.openDetailKasusModal(catatanId);
+                        return;
+                    }
+                    if (!window.confirm('Anda menyetujui keputusan SKORSING untuk siswa ini?')) {
+                        window.openDetailKasusModal(catatanId);
+                        return;
+                    }
+                } else {
+                    note = window.prompt('Catatan perubahan status (boleh dikosongkan):') || '';
+                }
+
+                const oldStatus = item.status || 'Baru';
+                item.status = newStatus;
+                if (!Array.isArray(item.statusHistory)) item.statusHistory = [];
+                item.statusHistory.push({
+                    status: newStatus,
+                    previousStatus: oldStatus,
+                    by: window.currentUser?.name || 'Administrator',
+                    role: 'admin',
+                    approvedBy: newStatus === 'Skorsing' ? (window.currentUser?.name || 'Administrator') : null,
+                    approvalRequired: newStatus === 'Skorsing',
+                    note,
+                    changedAt: new Date().toISOString()
+                });
+                const res = await window.saveDataToCloud('catatans', item, item.id);
+                if (res) {
+                    window.showToast(`Status kasus berhasil diubah menjadi ${newStatus}.`, 'success');
+                    window.openDetailKasusModal(catatanId);
+                }
+            };
+        })();
+        // ================= END PATCH CATATAN SISWA =================
+
+        // ===== MODEL A V2: PENYEMPURNAAN TERINTEGRASI CATATAN SISWA =====
+        // Seluruh pengembangan ditambahkan sebagai override terisolasi.
+        // Tidak mengubah koleksi/struktur data lama; hanya menambah field opsional.
+        (() => {
+            const escText = (value) => String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+            }[ch]));
+
+            const roleNow = () => String(window.currentUser?.role || '').toLowerCase();
+            const isAdminNow = () => roleNow() === 'admin';
+            const isStudentNow = () => roleNow() === 'siswa';
+
+            // Ringkasan status ditambahkan di halaman Catatan & Disiplin yang sama.
+            const baseRenderCatatan = window.renderCatatan;
+            if (typeof baseRenderCatatan === 'function' && !baseRenderCatatan.__modelAV2) {
+                const wrappedRender = function(...args) {
+                    const result = baseRenderCatatan.apply(this, args);
+                    const content = document.getElementById('main-content');
+                    if (!content || content.querySelector('[data-model-a-summary="1"]')) return result;
+
+                    const visibleRows = [...(window.appState.catatans || [])].filter(c => {
+                        if (isStudentNow()) return c.nisn === window.currentUser?.id;
+                        if (roleNow() === 'guru') {
+                            const allowed = window.getFilteredStudents?.() || [];
+                            const allowedNisn = allowed.map(s => s.nisn);
+                            const classes = window.currentUser?.classes || [];
+                            return (classes.length ? classes.includes(c.class) : true) || allowedNisn.includes(c.nisn);
+                        }
+                        return true;
+                    }).filter(c => {
+                        const cls = window.catatanClassFilter;
+                        if (cls && cls !== 'Semua' && c.class !== cls) return false;
+                        const q = String(window.catatanSearchQuery || '').trim().toLowerCase();
+                        return !q || String(c.studentName || '').toLowerCase().includes(q) || String(c.nisn || '').toLowerCase().includes(q);
+                    });
+
+                    const violations = visibleRows.filter(c => String(c.category).toLowerCase() === 'pelanggaran');
+                    const unresolved = violations.filter(c => !['Selesai'].includes(c.status || 'Baru'));
+                    const active = violations.filter(c => (c.status || 'Baru') === 'Dalam Penanganan');
+                    const suspended = violations.filter(c => c.status === 'Skorsing');
+                    const summary = document.createElement('div');
+                    summary.dataset.modelASummary = '1';
+                    summary.className = 'grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5';
+                    summary.innerHTML = `
+                        <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                            <div class="text-[10px] uppercase tracking-wider font-extrabold text-slate-400">Total Pelanggaran</div>
+                            <div class="text-2xl font-black text-slate-800 mt-1">${violations.length}</div>
+                        </div>
+                        <div class="bg-white border border-amber-100 rounded-2xl p-4 shadow-sm">
+                            <div class="text-[10px] uppercase tracking-wider font-extrabold text-amber-600">Belum Selesai</div>
+                            <div class="text-2xl font-black text-amber-700 mt-1">${unresolved.length}</div>
+                        </div>
+                        <div class="bg-white border border-blue-100 rounded-2xl p-4 shadow-sm">
+                            <div class="text-[10px] uppercase tracking-wider font-extrabold text-blue-600">Dalam Penanganan</div>
+                            <div class="text-2xl font-black text-blue-700 mt-1">${active.length}</div>
+                        </div>
+                        <div class="bg-white border border-rose-100 rounded-2xl p-4 shadow-sm">
+                            <div class="text-[10px] uppercase tracking-wider font-extrabold text-rose-600">Skorsing</div>
+                            <div class="text-2xl font-black text-rose-700 mt-1">${suspended.length}</div>
+                        </div>`;
+                    const tableCard = content.querySelector('.bg-white.rounded-3xl');
+                    if (tableCard) content.insertBefore(summary, tableCard);
+                    else content.appendChild(summary);
+                    return result;
+                };
+                wrappedRender.__modelAV2 = true;
+                window.renderCatatan = wrappedRender;
+            }
+
+            // Detail satu catatan: riwayat tindak lanjut terurut dan jejak perubahan status.
+            window.openDetailKasusModal = function(catatanId) {
+                const item = (window.appState.catatans || []).find(c => c.id === catatanId);
+                if (!item) return;
+                const category = String(item.category || '').toLowerCase();
+                const isViolation = category === 'pelanggaran';
+                const canAddFollowUp = isViolation && !isStudentNow();
+                const canChangeStatus = isViolation && isAdminNow();
+                const status = item.status || 'Baru';
+                const badgeClass = status === 'Selesai' ? 'bg-emerald-100 text-emerald-800' :
+                    status === 'Skorsing' ? 'bg-rose-100 text-rose-800' :
+                    status === 'Dalam Penanganan' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800';
+
+                const followUps = (Array.isArray(item.tindakLanjut) ? item.tindakLanjut : [])
+                    .slice().sort((a,b) => String(b.createdAt || b.tanggal || '').localeCompare(String(a.createdAt || a.tanggal || '')));
+                const timeline = followUps.length ? followUps.map(tl => `
+                    <article class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl mb-3">
+                        <div class="flex flex-wrap justify-between gap-2 mb-1">
+                            <strong class="text-xs text-indigo-700">${escText(tl.jenisTindakan || 'Tindak lanjut')}</strong>
+                            <span class="text-[10px] text-slate-400 font-bold">${escText(tl.tanggal || '-')}</span>
+                        </div>
+                        <p class="text-xs text-slate-700 whitespace-pre-wrap">${escText(tl.hasil || '-')}</p>
+                        <div class="text-[10px] text-slate-500 mt-2">Petugas: ${escText(tl.petugas || '-')} · Tahap: ${escText(tl.tahap || 'Belum ditentukan')}</div>
+                    </article>`).join('') :
+                    '<p class="text-xs text-slate-400 italic text-center py-4">Belum ada tindak lanjut yang tercatat.</p>';
+
+                const audit = (Array.isArray(item.statusHistory) ? item.statusHistory : [])
+                    .slice().sort((a,b) => String(b.changedAt || '').localeCompare(String(a.changedAt || '')));
+                const auditHtml = audit.length ? audit.map(a => `
+                    <div class="p-3 rounded-xl bg-white border border-slate-200 mb-2">
+                        <div class="flex flex-wrap justify-between gap-2">
+                            <strong class="text-xs text-slate-800">${escText(a.status || '-')}</strong>
+                            <span class="text-[10px] text-slate-400">${escText(a.changedAt || '-')}</span>
+                        </div>
+                        <div class="text-[10px] text-slate-500 mt-1">Oleh: ${escText(a.by || '-')} (${escText(a.role || '-')})</div>
+                        ${a.approvalRequired ? '<div class="text-[10px] font-bold text-rose-700 mt-1">Persetujuan skorsing tercatat</div>' : ''}
+                        <p class="text-xs text-slate-600 mt-1 whitespace-pre-wrap">${escText(a.note || '-')}</p>
+                    </div>`).join('') :
+                    '<p class="text-xs text-slate-400 italic">Belum ada perubahan status yang tercatat.</p>';
+
+                const statusControls = canChangeStatus ? `
+                    <div class="flex flex-wrap items-center gap-2">
+                        <label class="text-xs font-bold text-slate-600">Status:</label>
+                        <select onchange="window.updateCaseStatus('${escText(item.id)}', this.value)" class="p-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700">
+                            ${['Baru','Dalam Penanganan','Skorsing','Selesai'].map(s => `<option value="${s}" ${status===s?'selected':''}>${s}</option>`).join('')}
+                        </select>
+                    </div>` : `<span class="text-xs text-slate-500">Status: <strong>${escText(status)}</strong></span>`;
+
+                window.openModal(`
+                    <div class="p-6 sm:p-8">
+                        <div class="flex justify-between items-start gap-3 mb-4">
+                            <div>
+                                <h3 class="text-xl font-extrabold text-slate-800"><i class="fas fa-clipboard-check text-indigo-600 mr-2"></i>Detail Catatan Siswa</h3>
+                                <p class="text-xs text-slate-500 mt-1">${isViolation ? 'Pemantauan penanganan pelanggaran siswa.' : 'Riwayat catatan siswa.'}</p>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-lg text-xs font-bold ${badgeClass}">${escText(status)}</span>
+                        </div>
+                        <div class="bg-indigo-50/60 p-4 rounded-2xl border border-indigo-100 mb-5 text-xs space-y-1.5">
+                            <div><strong>Nama:</strong> ${escText(item.studentName)} · <strong>NISN:</strong> ${escText(item.nisn)}</div>
+                            <div><strong>Kelas:</strong> ${escText(item.class || '-')}</div>
+                            <div><strong>Kategori:</strong> ${escText(item.category || '-')}</div>
+                            <div><strong>Catatan:</strong> ${escText(item.description || '-')}</div>
+                            <div><strong>Tanggal:</strong> ${escText(item.date || '-')} · <strong>Pelapor:</strong> ${escText(item.reporter || '-')}</div>
+                        </div>
+                        ${isViolation ? `
+                            <section class="mb-5">
+                                <div class="flex justify-between items-center gap-2 mb-3">
+                                    <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-700">Riwayat Tindak Lanjut & Pembimbingan</h4>
+                                    ${canAddFollowUp ? `<button onclick="window.openAddTindakLanjutModal('${escText(item.id)}')" class="px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold"><i class="fas fa-plus mr-1"></i>Tambah</button>` : ''}
+                                </div>
+                                <div class="max-h-64 overflow-y-auto custom-scrollbar pr-1">${timeline}</div>
+                            </section>
+                            <section class="pt-4 border-t border-slate-100 mb-4">
+                                <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-700 mb-3">Jejak Perubahan Status</h4>
+                                <div class="max-h-48 overflow-y-auto custom-scrollbar">${auditHtml}</div>
+                            </section>` : ''}
+                        <div class="pt-4 border-t border-slate-100 flex flex-wrap justify-between items-center gap-3">
+                            ${isViolation ? statusControls : '<span class="text-xs text-slate-400">Tindak lanjut kasus hanya untuk kategori pelanggaran.</span>'}
+                            <button onclick="window.closeModal()" class="px-5 py-2 bg-slate-100 text-slate-700 font-bold rounded-xl text-xs">Tutup</button>
+                        </div>
+                    </div>`, 'max-w-2xl');
+            };
+
+            // Tindak lanjut: guru/wali kelas dapat mencatat; siswa tidak dapat mengubah data.
+            // Peran admin diperlakukan sebagai pejabat penyetuju pada instalasi yang hanya
+            // menyediakan role admin/guru/siswa. Role terpisah kepala madrasah belum ada.
+            window.saveTindakLanjut = async function(e, catatanId) {
+                e.preventDefault();
+                const item = (window.appState.catatans || []).find(c => c.id === catatanId);
+                if (!item || String(item.category).toLowerCase() !== 'pelanggaran' || isStudentNow()) {
+                    window.showToast('Tindak lanjut hanya dapat dicatat petugas untuk pelanggaran.', 'error');
+                    return;
+                }
+                const jenis = document.getElementById('tl-jenis')?.value || '';
+                const tanggal = document.getElementById('tl-tanggal')?.value || '';
+                const petugas = document.getElementById('tl-petugas')?.value.trim() || window.currentUser?.name || 'Petugas';
+                const hasil = document.getElementById('tl-hasil')?.value.trim() || '';
+                if (!jenis || !tanggal || !hasil) {
+                    window.showToast('Lengkapi jenis tindakan, tanggal, dan hasil pembimbingan.', 'error');
+                    return;
+                }
+                const role = roleNow();
+                const homerooms = window.appState.homerooms || [];
+                const isHomeroom = role === 'guru' && homerooms.some(h =>
+                    String(h.class || h.className || h.kelas || '') === String(item.class) &&
+                    String(h.teacherId || h.guruId || h.nip || '') === String(window.currentUser?.id || window.currentUser?.nip || '')
+                );
+                const stage = isAdminNow() ? 'Administrasi' : (isHomeroom ? 'Wali Kelas' : 'Guru');
+                if (!Array.isArray(item.tindakLanjut)) item.tindakLanjut = [];
+                const now = new Date().toISOString();
+                item.tindakLanjut.push({ tanggal, jenisTindakan: jenis, petugas, hasil, tahap: stage, actorRole: role, createdAt: now });
+                const previousStatus = item.status || 'Baru';
+                if (previousStatus === 'Baru') item.status = 'Dalam Penanganan';
+                if (!Array.isArray(item.statusHistory)) item.statusHistory = [];
+                if (item.status !== previousStatus) item.statusHistory.push({
+                    status: item.status, previousStatus, by: window.currentUser?.name || petugas,
+                    role, note: `Tindak lanjut dicatat: ${jenis}`, changedAt: now
+                });
+                const saved = await window.saveDataToCloud('catatans', item, item.id);
+                if (saved) {
+                    const student = (window.appState.students || []).find(s => s.nisn === item.nisn);
+                    const phone = student?.phone || student?.hpOrtu || student?.noHp;
+                    if (phone && phone !== '-' && typeof window.sendWaNotification === 'function') {
+                        const msg = `*TINDAK LANJUT CATATAN SISWA*\\nNama: ${item.studentName}\\nKelas: ${item.class}\\nKasus: ${item.description}\\nTindakan: ${jenis}\\nTanggal: ${tanggal}\\nPetugas: ${petugas}\\nStatus: ${item.status || 'Baru'}\\n- ${window.appState.settings?.schoolName || 'Madrasah'}`;
+                        window.sendWaNotification(phone, msg);
+                    }
+                    window.showToast('Tindak lanjut berhasil disimpan.', 'success');
+                    window.openDetailKasusModal(catatanId);
+                }
+            };
+        })();
+        // ===== END MODEL A V2 =====
+
+
+
+        // ===== MODEL A V3: RIWAYAT LENGKAP SISWA =====
+        (() => {
+            const escV3 = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+            const roleV3 = () => String(window.currentUser?.role || '').toLowerCase();
+            const dateV3 = (v) => {
+                if (!v) return null;
+                const d = new Date(v);
+                return Number.isNaN(d.getTime()) ? null : d;
+            };
+            const fmtV3 = (v) => { const d = dateV3(v); return d ? d.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : (v || 'Tanggal tidak tercatat'); };
+
+            window.openRiwayatLengkapSiswa = function(nisn) {
+                const student = (window.appState.students || []).find(s => String(s.nisn) === String(nisn));
+                if (!student) return window.showToast?.('Data siswa tidak ditemukan.', 'error');
+                // Siswa hanya dapat membuka riwayat miliknya sendiri.
+                if (roleV3() === 'siswa' && String(window.currentUser?.id) !== String(nisn)) {
+                    return window.showToast?.('Anda tidak memiliki akses ke riwayat siswa ini.', 'error');
+                }
+                const all = (window.appState.catatans || []).filter(c => String(c.nisn) === String(nisn));
+                const sorted = [...all].sort((a,b) => (dateV3(b.date || b.tanggal || b.createdAt)?.getTime() || 0) - (dateV3(a.date || a.tanggal || a.createdAt)?.getTime() || 0));
+                const counts = {pelanggaran:0, prestasi:0, perkembangan:0};
+                sorted.forEach(c => { const k=String(c.category||'').toLowerCase(); if (counts[k] !== undefined) counts[k]++; });
+                document.getElementById('mihuri-riwayat-lengkap-v3')?.remove();
+                const modal = document.createElement('div');
+                modal.id = 'mihuri-riwayat-lengkap-v3';
+                modal.className = 'fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/70 p-3 sm:p-5';
+                modal.innerHTML = `
+                  <div class="bg-white w-full max-w-4xl max-h-[92vh] overflow-hidden rounded-3xl shadow-2xl flex flex-col">
+                    <div class="p-5 sm:p-6 bg-gradient-to-r from-indigo-700 to-violet-700 text-white">
+                      <div class="flex items-start justify-between gap-3">
+                        <div><div class="text-xs font-bold uppercase tracking-widest text-indigo-200">Arsip perkembangan siswa</div>
+                          <h2 class="text-xl sm:text-2xl font-black mt-1">Riwayat Lengkap Siswa</h2>
+                          <div class="text-sm text-indigo-100 mt-1">${escV3(student.name || student.nama || sorted[0]?.studentName || 'Nama siswa')} · ${escV3(student.class || student.kelas || sorted[0]?.class || '-')}</div>
+                          <div class="text-xs text-indigo-200 mt-1">NISN: ${escV3(nisn)}</div>
+                        </div>
+                        <div class="flex flex-wrap gap-2"><button type="button" onclick="window.printRiwayatLengkapSiswa('${escV3(nisn)}')" class="rounded-xl bg-white text-indigo-800 hover:bg-indigo-50 px-3 py-2 font-bold"><i class="fas fa-print mr-1"></i> Cetak / Simpan PDF</button><button type="button" onclick="document.getElementById('mihuri-riwayat-lengkap-v3').remove()" class="rounded-xl bg-white/15 hover:bg-white/25 px-3 py-2 font-bold">Tutup ✕</button></div>
+                      </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 p-4 bg-slate-50 border-b">
+                      <div class="rounded-xl bg-rose-50 border border-rose-100 p-3"><div class="text-[10px] uppercase font-extrabold text-rose-600">Pelanggaran</div><div class="text-2xl font-black text-rose-700">${counts.pelanggaran}</div></div>
+                      <div class="rounded-xl bg-emerald-50 border border-emerald-100 p-3"><div class="text-[10px] uppercase font-extrabold text-emerald-600">Prestasi</div><div class="text-2xl font-black text-emerald-700">${counts.prestasi}</div></div>
+                      <div class="rounded-xl bg-sky-50 border border-sky-100 p-3"><div class="text-[10px] uppercase font-extrabold text-sky-600">Perkembangan</div><div class="text-2xl font-black text-sky-700">${counts.perkembangan}</div></div>
+                    </div>
+                    <div class="p-4 overflow-y-auto">
+                      ${sorted.length ? `<div class="space-y-3">${sorted.map((c,i) => {
+                        const cat=String(c.category||'Catatan').toLowerCase();
+                        const color=cat==='pelanggaran'?'rose':cat==='prestasi'?'emerald':'sky';
+                        const date=c.date || c.tanggal || c.createdAt;
+                        const point=cat==='pelanggaran' ? (c.point ? `-${Math.abs(Number(c.point)||0)}` : '0') : cat==='prestasi' ? `+${Math.abs(Number(c.point)||0)}` : '—';
+                        const follow=Array.isArray(c.tindakLanjut)?c.tindakLanjut.length:0;
+                        return `<article class="border border-slate-200 rounded-2xl p-4 hover:shadow-sm">
+                          <div class="flex flex-wrap items-center justify-between gap-2"><div class="flex items-center gap-2"><span class="px-2.5 py-1 rounded-full text-[10px] uppercase font-black bg-${color}-100 text-${color}-700">${escV3(c.category || 'Catatan')}</span><span class="text-xs text-slate-500">${escV3(fmtV3(date))}</span></div><span class="text-sm font-black ${cat==='pelanggaran'?'text-rose-600':cat==='prestasi'?'text-emerald-600':'text-slate-400'}">${escV3(point)}</span></div>
+                          <p class="font-bold text-slate-800 mt-2">${escV3(c.description || c.item_catatan || c.keterangan || 'Tidak ada uraian')}</p>
+                          <div class="text-xs text-slate-500 mt-2 flex flex-wrap gap-x-4 gap-y-1"><span>Pelapor: ${escV3(c.reporter || c.Guru_pencatat || '-')}</span>${cat==='pelanggaran'?`<span>Status: ${escV3(c.status || 'Baru')}</span><span>Tindak lanjut: ${follow} kali</span>`:''}</div>
+                          ${cat==='pelanggaran' && c.id ? `<button type="button" onclick="window.openDetailKasusModal('${escV3(c.id)}')" class="mt-3 text-xs font-bold text-indigo-700 hover:text-indigo-900">Buka detail & tindak lanjut →</button>`:''}
+                        </article>`;
+                      }).join('')}</div>` : `<div class="text-center py-12 text-slate-500"><div class="text-4xl mb-3">📚</div><div class="font-bold">Belum ada catatan untuk siswa ini.</div><div class="text-sm mt-1">Catatan pelanggaran, prestasi, atau perkembangan akan tampil di sini.</div></div>`}
+                    </div>
+                    <div class="px-5 py-3 border-t bg-slate-50 text-xs text-slate-500">Menampilkan ${sorted.length} catatan. Riwayat bersumber dari data Catatan Siswa yang tersimpan.</div>
+                  </div>`;
+                modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+                document.body.appendChild(modal);
+            };
+
+            // Tambahkan tombol pada halaman Catatan Siswa yang sudah ada.
+            const priorRenderV3 = window.renderCatatan;
+            if (typeof priorRenderV3 === 'function' && !priorRenderV3.__historyV3) {
+                const wrappedV3 = function(...args) {
+                    const result = priorRenderV3.apply(this,args);
+                    const content=document.getElementById('main-content');
+                    if (!content || content.querySelector('[data-riwayat-lengkap-v3="1"]')) return result;
+                    const toolbar=document.createElement('div');
+                    toolbar.dataset.riwayatLengkapV3='1';
+                    toolbar.className='mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-indigo-100 bg-indigo-50 p-4';
+                    toolbar.innerHTML=`<div><div class="font-black text-indigo-900">Riwayat seluruh catatan per siswa</div><div class="text-xs text-indigo-700 mt-1">Pilih siswa untuk melihat pelanggaran, prestasi, dan perkembangan dalam satu halaman.</div></div><div class="flex flex-wrap gap-2"><select id="mihuri-riwayat-pilih-v3" class="min-w-[190px] rounded-xl border border-indigo-200 bg-white px-3 py-2 text-sm font-semibold"><option value="">Pilih siswa...</option>${(window.appState.students||[]).filter(st=>roleV3()!=='siswa'||String(st.nisn)===String(window.currentUser?.id)).sort((a,b)=>String(a.name||a.nama||'').localeCompare(String(b.name||b.nama||''),'id')).map(st=>`<option value="${escV3(st.nisn)}">${escV3(st.name||st.nama||st.nisn)} · ${escV3(st.class||st.kelas||'')}</option>`).join('')}</select><button type="button" id="mihuri-riwayat-buka-v3" class="rounded-xl bg-indigo-700 hover:bg-indigo-800 px-4 py-2 text-sm font-bold text-white">Lihat Riwayat</button></div>`;
+                    const summary=content.querySelector('[data-model-a-summary="1"]');
+                    if(summary) summary.insertAdjacentElement('afterend',toolbar); else content.prepend(toolbar);
+                    toolbar.querySelector('#mihuri-riwayat-buka-v3').addEventListener('click',()=>{
+                        const val=toolbar.querySelector('#mihuri-riwayat-pilih-v3').value;
+                        if(!val) return window.showToast?.('Silakan pilih siswa terlebih dahulu.','warning');
+                        window.openRiwayatLengkapSiswa(val);
+                    });
+                    return result;
+                };
+                wrappedV3.__historyV3=true;
+                window.renderCatatan=wrappedV3;
+            }
+        })();
+
+
+        // ===== MODEL A V4: CETAK REKAM JEJAK + AKSES DASHBOARD SISWA =====
+        (() => {
+            const escV4 = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+            const roleV4 = () => String(window.currentUser?.role || '').toLowerCase();
+            const dateV4 = (v) => { const d = v ? new Date(v) : null; return d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) : (v || 'Tidak tercatat'); };
+
+            window.printRiwayatLengkapSiswa = function(nisn) {
+                const role = roleV4();
+                if (role === 'siswa' && String(window.currentUser?.id) !== String(nisn)) {
+                    return window.showToast?.('Anda hanya dapat mencetak rekam jejak milik sendiri.','error');
+                }
+                const student = (window.appState.students || []).find(x => String(x.nisn) === String(nisn));
+                if (!student) return window.showToast?.('Data siswa tidak ditemukan.','error');
+                const records = (window.appState.catatans || []).filter(x => String(x.nisn) === String(nisn)).slice().sort((a,b) => new Date(b.date || b.tanggal || b.createdAt || 0)-new Date(a.date || a.tanggal || a.createdAt || 0));
+                const name = student.name || student.nama || records[0]?.studentName || '-';
+                const cls = student.class || student.kelas || records[0]?.class || '-';
+                const school = window.appState.settings?.schoolName || 'Madrasah';
+                const counts = {pelanggaran:0,prestasi:0,perkembangan:0};
+                records.forEach(r => { const k=String(r.category||'').toLowerCase(); if(counts[k] !== undefined) counts[k]++; });
+                const rows = records.length ? records.map((r,i) => {
+                    const cat=String(r.category||'Catatan');
+                    const follow=Array.isArray(r.tindakLanjut)?r.tindakLanjut:[];
+                    return `<tr><td>${i+1}</td><td>${escV4(dateV4(r.date||r.tanggal||r.createdAt))}</td><td>${escV4(cat)}</td><td>${escV4(r.description||r.item_catatan||r.keterangan||'-')}</td><td>${escV4(r.reporter||r.Guru_pencatat||'-')}</td><td>${escV4(r.status|| (cat.toLowerCase()==='pelanggaran'?'Baru':'-'))}</td></tr>${follow.map((f,j)=>`<tr class="follow"><td></td><td>${escV4(dateV4(f.tanggal||f.date||f.createdAt))}</td><td colspan="2"><b>Tindak lanjut ${j+1}:</b> ${escV4(f.jenisTindakan||f.jenis||'-')} — ${escV4(f.hasil||f.keterangan||'-')}</td><td>${escV4(f.petugas||'-')}</td><td>${escV4(f.tahap||'')}</td></tr>`).join('')}`;
+                }).join('') : '<tr><td colspan="6" class="empty">Belum ada catatan siswa.</td></tr>';
+                const html = `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Rekam Jejak Siswa - ${escV4(name)}</title><style>
+                @page{size:A4;margin:16mm}*{box-sizing:border-box}body{font:12px Arial,sans-serif;color:#172033}header{text-align:center;border-bottom:3px double #222;padding-bottom:12px;margin-bottom:16px}h1{font-size:19px;margin:0 0 5px}h2{font-size:15px;margin:18px 0 8px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:14px 0}.summary{display:flex;gap:10px;margin:12px 0}.summary div{border:1px solid #bbb;padding:8px;flex:1;text-align:center}.summary b{display:block;font-size:18px}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #888;padding:6px;vertical-align:top}th{background:#eee}.follow td{background:#f8fafc;color:#334155}.empty{text-align:center;padding:20px}.foot{margin-top:22px;font-size:10px;color:#444}.sign{display:flex;justify-content:space-between;margin-top:45px;text-align:center}.sign div{width:42%}.line{margin-top:58px;border-top:1px solid #333;padding-top:5px}.actions{text-align:right;margin-bottom:10px}@media print{.actions{display:none}}
+                </style></head><body><div class="actions"><button onclick="window.print()">Cetak / Simpan PDF</button></div><header><h1>${escV4(school)}</h1><div>DOKUMEN REKAM JEJAK / RIWAYAT CATATAN SISWA</div></header><div class="meta"><div><b>Nama Siswa:</b> ${escV4(name)}</div><div><b>NISN:</b> ${escV4(nisn)}</div><div><b>Kelas:</b> ${escV4(cls)}</div><div><b>Tanggal Cetak:</b> ${escV4(new Date().toLocaleDateString('id-ID'))}</div></div><div class="summary"><div>Pelanggaran<b>${counts.pelanggaran}</b></div><div>Prestasi<b>${counts.prestasi}</b></div><div>Perkembangan<b>${counts.perkembangan}</b></div></div><h2>Daftar Riwayat Catatan dan Tindak Lanjut</h2><table><thead><tr><th>No.</th><th>Tanggal</th><th>Kategori</th><th>Uraian Catatan / Tindak Lanjut</th><th>Petugas</th><th>Status / Tahap</th></tr></thead><tbody>${rows}</tbody></table><div class="foot">Dokumen ini dicetak dari data Catatan Siswa pada sistem ${escV4(school)}. Isi dokumen mengikuti data yang tersimpan pada saat pencetakan.</div><div class="sign"><div>Mengetahui,<br>Kepala Madrasah<div class="line">(........................................)</div></div><div>${escV4(window.appState.settings?.schoolAddress||'') ? escV4(window.appState.settings.schoolAddress)+'<br>' : ''}Wali Kelas<div class="line">(........................................)</div></div></div><script>window.onload=()=>setTimeout(()=>window.print(),350);<\/script></body></html>`;
+                const w=window.open('','_blank');
+                if(!w) return window.showToast?.('Pop-up diblokir. Izinkan pop-up untuk mencetak dokumen.','warning');
+                w.document.open(); w.document.write(html); w.document.close();
+            };
+
+            // Tambahkan akses cepat pada dashboard khusus akun siswa, hanya untuk NISN miliknya.
+            const oldDashboardV4 = window.renderDashboard;
+            if (typeof oldDashboardV4 === 'function' && !oldDashboardV4.__studentHistoryV4) {
+                const wrappedDashboardV4 = function(...args) {
+                    const result = oldDashboardV4.apply(this,args);
+                    if (roleV4() !== 'siswa') return result;
+                    const content=document.getElementById('main-content');
+                    const nisn=window.currentUser?.id;
+                    if (!content || !nisn || content.querySelector('[data-student-history-v4="1"]')) return result;
+                    const student=(window.appState.students||[]).find(x=>String(x.nisn)===String(nisn));
+                    if(!student) return result;
+                    const card=document.createElement('section');
+                    card.dataset.studentHistoryV4='1';
+                    card.className='mx-3 sm:mx-5 mb-5 rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-violet-50 p-4 sm:p-5 shadow-sm';
+                    card.innerHTML=`<div class="flex flex-wrap items-center justify-between gap-3"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-indigo-700 text-white flex items-center justify-center text-xl"><i class="fas fa-folder-open"></i></div><div><div class="font-black text-indigo-950">Rekam Jejak & Riwayat Catatan Saya</div><div class="text-xs text-indigo-700 mt-1">Lihat catatan pelanggaran, prestasi, perkembangan, dan tindak lanjut yang tercatat di madrasah.</div></div></div><button type="button" class="rounded-xl bg-indigo-700 hover:bg-indigo-800 text-white px-4 py-2.5 text-sm font-bold"><i class="fas fa-book-open mr-1"></i> Lihat Riwayat Saya</button></div>`;
+                    card.querySelector('button').addEventListener('click',()=>window.openRiwayatLengkapSiswa(nisn));
+                    content.appendChild(card);
+                    return result;
+                };
+                wrappedDashboardV4.__studentHistoryV4=true;
+                window.renderDashboard=wrappedDashboardV4;
+            }
+        })();
+        // ===== END MODEL A V4 =====
+
+        // ===== END MODEL A V3 =====
+
+</script>
 </body>
 </html>
