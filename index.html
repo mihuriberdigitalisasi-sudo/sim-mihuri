@@ -11245,6 +11245,269 @@ window.downloadTeacherAttendanceWord = function() {
 
         // ===== END MODEL A V3 =====
 
+
+        /* ==========================================================================
+           TAMBAHAN MODUL CETAK REKAP MULTI-TAB (TANPA MENGUBAH FUNGSI ASLI)
+           - Filter khusus absensi, akademik, catatan, dan pembayaran.
+           - Menggunakan data appState yang sudah dimuat oleh sistem.
+           ========================================================================== */
+        (() => {
+            const originalRenderRecapData = window.renderRecapData;
+            if (typeof originalRenderRecapData !== 'function' || originalRenderRecapData.__printRecapEnhanced) return;
+
+            const recapFilterDefaults = {
+                absensi: { from: '', to: '' },
+                akademik: { from: '', to: '', subject: 'Semua', type: 'Semua' },
+                catatan: { from: '', to: '', category: 'Semua' },
+                pembayaran: { from: '', to: '', type: 'Semua' }
+            };
+            window.recapPrintFilters = window.recapPrintFilters || JSON.parse(JSON.stringify(recapFilterDefaults));
+
+            const escPrintRecap = (value) => String(value ?? '-').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[ch]));
+
+            const dateValueRecap = (record) => {
+                const raw = record?.date || record?.tanggal || record?.createdAt || '';
+                if (!raw) return '';
+                if (typeof raw === 'string') {
+                    const iso = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+                    if (iso) return iso[1];
+                    const dmy = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+                    if (dmy) return `${dmy[3]}-${String(dmy[2]).padStart(2,'0')}-${String(dmy[1]).padStart(2,'0')}`;
+                }
+                const parsed = new Date(raw);
+                return Number.isNaN(parsed.getTime()) ? '' : [
+                    parsed.getFullYear(), String(parsed.getMonth()+1).padStart(2,'0'), String(parsed.getDate()).padStart(2,'0')
+                ].join('-');
+            };
+
+            const getRecapFilter = () => {
+                const tab = window.activeRecapTab || 'absensi';
+                if (!window.recapPrintFilters[tab]) window.recapPrintFilters[tab] = { ...recapFilterDefaults[tab] };
+                return window.recapPrintFilters[tab];
+            };
+
+            const optionHtmlRecap = (items, selected) => {
+                const unique = [...new Set(items.filter(v => v !== undefined && v !== null && String(v).trim() !== ''))]
+                    .sort((a,b) => String(a).localeCompare(String(b), 'id'));
+                return ['Semua', ...unique].map(v =>
+                    `<option value="${escPrintRecap(v)}" ${String(v) === String(selected || 'Semua') ? 'selected' : ''}>${v === 'Semua' ? 'Semua' : escPrintRecap(v)}</option>`
+                ).join('');
+            };
+
+            const renderRecapPrintControls = () => {
+                const content = document.getElementById('main-content');
+                if (!content) return;
+                const tab = window.activeRecapTab || 'absensi';
+                const filter = getRecapFilter();
+                const academics = window.appState.academics || [];
+                const payments = window.appState.payments || [];
+                const catatans = window.appState.catatans || [];
+                let extraFilters = '';
+
+                if (tab === 'akademik') {
+                    extraFilters = `
+                        <label class="text-xs font-bold text-slate-500">Mata Pelajaran
+                            <select data-recap-filter="subject" class="block mt-1 p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 min-w-[150px]">
+                                ${optionHtmlRecap(academics.map(x => x.subject), filter.subject)}
+                            </select>
+                        </label>
+                        <label class="text-xs font-bold text-slate-500">Jenis Penilaian
+                            <select data-recap-filter="type" class="block mt-1 p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 min-w-[150px]">
+                                ${optionHtmlRecap(academics.map(x => x.type), filter.type)}
+                            </select>
+                        </label>`;
+                } else if (tab === 'catatan') {
+                    extraFilters = `
+                        <label class="text-xs font-bold text-slate-500">Kategori Catatan
+                            <select data-recap-filter="category" class="block mt-1 p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 min-w-[150px]">
+                                ${optionHtmlRecap(catatans.map(x => x.category), filter.category)}
+                            </select>
+                        </label>`;
+                } else if (tab === 'pembayaran') {
+                    extraFilters = `
+                        <label class="text-xs font-bold text-slate-500">Jenis Pembayaran
+                            <select data-recap-filter="type" class="block mt-1 p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 min-w-[160px]">
+                                ${optionHtmlRecap(payments.map(x => x.type), filter.type)}
+                            </select>
+                        </label>`;
+                }
+
+                const controls = `
+                    <section id="recap-print-controls" class="bg-white border border-indigo-100 rounded-2xl shadow-sm p-4 mb-6">
+                        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+                            <div>
+                                <div class="font-extrabold text-slate-800 text-sm flex items-center gap-2">
+                                    <i class="fas fa-print text-indigo-600"></i> Filter & Cetak ${({
+                                        absensi:'Rekap Absensi', akademik:'Rekap Akademik',
+                                        catatan:'Rekap Catatan', pembayaran:'Rekap Pembayaran'
+                                    })[tab]}
+                                </div>
+                                <p class="text-[11px] text-slate-500 mt-1">Atur rentang tanggal dan filter sesuai kebutuhan, lalu cetak atau simpan sebagai PDF.</p>
+                            </div>
+                            <div class="flex flex-wrap items-end gap-3">
+                                <label class="text-xs font-bold text-slate-500">Dari Tanggal
+                                    <input type="date" data-recap-filter="from" value="${escPrintRecap(filter.from)}" class="block mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">
+                                </label>
+                                <label class="text-xs font-bold text-slate-500">Sampai Tanggal
+                                    <input type="date" data-recap-filter="to" value="${escPrintRecap(filter.to)}" class="block mt-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700">
+                                </label>
+                                ${extraFilters}
+                                <button type="button" id="recap-print-reset" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold">
+                                    <i class="fas fa-undo mr-1"></i> Reset
+                                </button>
+                                <button type="button" id="recap-print-button" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-extrabold shadow-md">
+                                    <i class="fas fa-print mr-2"></i> Cetak Rekap
+                                </button>
+                            </div>
+                        </div>
+                    </section>`;
+
+                const old = document.getElementById('recap-print-controls');
+                if (old) old.remove();
+                const tabs = content.children[1];
+                if (tabs) tabs.insertAdjacentHTML('afterend', controls);
+
+                content.querySelectorAll('[data-recap-filter]').forEach(input => {
+                    input.addEventListener('change', () => {
+                        filter[input.dataset.recapFilter] = input.value;
+                        renderRecapPrintControls();
+                    });
+                });
+                document.getElementById('recap-print-reset')?.addEventListener('click', () => {
+                    window.recapPrintFilters[tab] = { ...recapFilterDefaults[tab] };
+                    renderRecapPrintControls();
+                });
+                document.getElementById('recap-print-button')?.addEventListener('click', window.printActiveRecap);
+            };
+
+            window.printActiveRecap = function() {
+                const tab = window.activeRecapTab || 'absensi';
+                const filter = getRecapFilter();
+                const selectedClass = window.recapClassFilter || 'Semua';
+                const students = (window.appState.students || []).filter(s =>
+                    selectedClass === 'Semua' || String(s.class || s.kelas || '') === String(selectedClass)
+                ).slice().sort((a,b) =>
+                    String(a.class || a.kelas || '').localeCompare(String(b.class || b.kelas || ''), 'id') ||
+                    String(a.name || a.nama || '').localeCompare(String(b.name || b.nama || ''), 'id')
+                );
+                const studentByNisn = new Map(students.map(s => [String(s.nisn), s]));
+                const inDateRange = r => {
+                    const date = dateValueRecap(r);
+                    if (filter.from && (!date || date < filter.from)) return false;
+                    if (filter.to && (!date || date > filter.to)) return false;
+                    return true;
+                };
+                const school = window.appState.settings?.schoolName || 'Madrasah';
+                const dateLabel = d => d ? new Date(`${d}T00:00:00`).toLocaleDateString('id-ID') : 'Semua';
+                const period = `${dateLabel(filter.from)} s.d. ${dateLabel(filter.to)}`;
+                let title = '', headers = [], rows = [], summary = '';
+
+                if (tab === 'absensi') {
+                    title = 'REKAPITULASI ABSENSI SISWA';
+                    headers = ['No','NISN','Nama Siswa','Kelas','Hadir','Izin','Sakit','Alpa','Terlambat','Total'];
+                    rows = students.map((s,i) => {
+                        const records = (window.appState.attendance || []).filter(a =>
+                            String(a.nisn) === String(s.nisn) && inDateRange(a)
+                        );
+                        const count = code => records.filter(a => String(a.status || '').toUpperCase() === code).length;
+                        return [i+1,s.nisn,s.name || s.nama,s.class || s.kelas,count('H'),count('I'),count('S'),count('A'),count('T'),records.length];
+                    });
+                    summary = `Jumlah siswa: ${students.length} | Total catatan kehadiran: ${(window.appState.attendance || []).filter(a => studentByNisn.has(String(a.nisn)) && inDateRange(a)).length}`;
+                } else if (tab === 'akademik') {
+                    title = 'REKAPITULASI AKADEMIK SISWA';
+                    headers = ['No','Tanggal','NISN','Nama Siswa','Kelas','Mata Pelajaran','Jenis Penilaian','Nilai'];
+                    const records = (window.appState.academics || []).filter(a =>
+                        studentByNisn.has(String(a.nisn)) && inDateRange(a) &&
+                        (filter.subject === 'Semua' || String(a.subject || '') === filter.subject) &&
+                        (filter.type === 'Semua' || String(a.type || '') === filter.type)
+                    ).sort((a,b) => dateValueRecap(a).localeCompare(dateValueRecap(b)));
+                    rows = records.map((a,i) => {
+                        const s = studentByNisn.get(String(a.nisn)) || {};
+                        return [i+1,dateValueRecap(a),a.nisn,s.name || a.studentName,s.class || a.class,a.subject,a.type,a.score];
+                    });
+                    summary = `Jumlah siswa pada kelas terpilih: ${students.length} | Jumlah data penilaian: ${records.length}`;
+                } else if (tab === 'catatan') {
+                    title = 'REKAPITULASI CATATAN SISWA';
+                    headers = ['No','Tanggal','NISN','Nama Siswa','Kelas','Kategori','Uraian Catatan','Poin','Pencatat'];
+                    const records = (window.appState.catatans || []).filter(c =>
+                        studentByNisn.has(String(c.nisn)) && inDateRange(c) &&
+                        (filter.category === 'Semua' || String(c.category || '') === filter.category)
+                    ).sort((a,b) => dateValueRecap(a).localeCompare(dateValueRecap(b)));
+                    rows = records.map((c,i) => {
+                        const s = studentByNisn.get(String(c.nisn)) || {};
+                        return [i+1,dateValueRecap(c),c.nisn,s.name || c.studentName,s.class || c.class,c.category,c.description || c.item_catatan || c.keterangan,c.point,c.reporter || c.Guru_pencatat];
+                    });
+                    summary = `Jumlah siswa pada kelas terpilih: ${students.length} | Jumlah catatan: ${records.length}`;
+                } else if (tab === 'pembayaran') {
+                    title = 'REKAPITULASI PEMBAYARAN SISWA';
+                    headers = ['No','Tanggal','NISN','Nama Siswa','Kelas','Jenis Pembayaran','Nominal','Metode','Keterangan'];
+                    const records = (window.appState.payments || []).filter(p =>
+                        studentByNisn.has(String(p.nisn)) && inDateRange(p) &&
+                        (filter.type === 'Semua' || String(p.type || '') === filter.type)
+                    ).sort((a,b) => dateValueRecap(a).localeCompare(dateValueRecap(b)));
+                    rows = records.map((p,i) => {
+                        const s = studentByNisn.get(String(p.nisn)) || {};
+                        return [i+1,dateValueRecap(p),p.nisn,s.name || p.studentName,s.class || p.class,p.type,Number(p.amount || 0).toLocaleString('id-ID'),p.method,p.note];
+                    });
+                    const total = records.reduce((sum,p) => sum + (Number(p.amount) || 0), 0);
+                    summary = `Jumlah siswa pada kelas terpilih: ${students.length} | Transaksi: ${records.length} | Total pembayaran: Rp ${total.toLocaleString('id-ID')}`;
+                }
+
+                const tableRows = rows.length ? rows.map(row =>
+                    `<tr>${row.map(cell => `<td>${escPrintRecap(cell)}</td>`).join('')}</tr>`
+                ).join('') : `<tr><td colspan="${headers.length}" class="empty">Tidak ada data sesuai filter yang dipilih.</td></tr>`;
+                const html = `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>${escPrintRecap(title)}</title>
+                    <style>
+                    @page{size:A4 landscape;margin:12mm}
+                    *{box-sizing:border-box}body{font:11px Arial,sans-serif;color:#172033}
+                    header{text-align:center;border-bottom:3px double #222;padding-bottom:10px;margin-bottom:14px}
+                    h1{font-size:18px;margin:0 0 5px}h2{font-size:14px;margin:0 0 12px}
+                    .meta{display:flex;justify-content:space-between;gap:12px;margin:10px 0;font-size:10px}
+                    .summary{font-weight:bold;margin:12px 0;padding:8px;background:#f1f5f9;border:1px solid #cbd5e1}
+                    table{width:100%;border-collapse:collapse;font-size:9px}
+                    th,td{border:1px solid #555;padding:5px 6px;text-align:left;vertical-align:top}
+                    th{background:#e9eef5;text-align:center;font-weight:bold}
+                    .empty{text-align:center;padding:18px}
+                    .sign{display:flex;justify-content:space-between;margin:35px 20px 0;text-align:center}
+                    .sign div{width:35%}.line{margin-top:48px;border-top:1px solid #333;padding-top:5px}
+                    .actions{text-align:right;margin-bottom:12px}
+                    button{padding:8px 14px;border:0;background:#334155;color:white;border-radius:5px;cursor:pointer}
+                    @media print{.actions{display:none}}
+                    </style></head><body>
+                    <div class="actions"><button onclick="window.print()">Cetak / Simpan PDF</button></div>
+                    <header><h1>${escPrintRecap(school)}</h1><div>DOKUMEN RESMI REKAPITULASI DATA SISWA</div></header>
+                    <h2>${escPrintRecap(title)}</h2>
+                    <div class="meta"><span><b>Kelas:</b> ${escPrintRecap(selectedClass === 'Semua' ? 'Semua Kelas' : selectedClass)}</span>
+                    <span><b>Periode:</b> ${escPrintRecap(period)}</span>
+                    <span><b>Tanggal Cetak:</b> ${new Date().toLocaleDateString('id-ID')}</span></div>
+                    <div class="summary">${escPrintRecap(summary)}</div>
+                    <table><thead><tr>${headers.map(h => `<th>${escPrintRecap(h)}</th>`).join('')}</tr></thead><tbody>${tableRows}</tbody></table>
+                    <div class="sign"><div>Mengetahui,<br>Kepala Madrasah<div class="line">(........................................)</div></div>
+                    <div>Petugas / Wali Kelas<div class="line">(........................................)</div></div></div>
+                    <script>window.onload=()=>setTimeout(()=>window.print(),300);<\/script>
+                    </body></html>`;
+                const printWindow = window.open('', '_blank');
+                if (!printWindow) {
+                    window.showToast?.('Jendela cetak diblokir. Izinkan pop-up untuk situs ini.', 'error');
+                    return;
+                }
+                printWindow.document.open();
+                printWindow.document.write(html);
+                printWindow.document.close();
+            };
+
+            const enhancedRenderRecapData = function(...args) {
+                const result = originalRenderRecapData.apply(this, args);
+                renderRecapPrintControls();
+                return result;
+            };
+            enhancedRenderRecapData.__printRecapEnhanced = true;
+            window.renderRecapData = enhancedRenderRecapData;
+        })();
+        /* ======================= AKHIR TAMBAHAN CETAK REKAP ======================= */
+
 </script>
 </body>
 </html>
